@@ -5,3 +5,5 @@
 /backend/package-lock.json
 /frontend/package-lock.json
 .DS_Store
+/frontend/.DS_Store
+/backend/.DS_Store
