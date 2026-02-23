@@ -1,0 +1,64 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { authApi } from '../lib/api';
+
+export function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const { data } = await authApi.login({ email, password });
+      login(data.accessToken, data.user);
+      if (data.user.role === 'COMPANY') navigate('/company');
+      else navigate('/companies');
+    } catch (err: unknown) {
+      setError(err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Ошибка входа');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ maxWidth: 400, margin: '2rem auto' }}>
+      <h1 style={{ marginTop: 0 }}>Вход</h1>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+        </div>
+        <div className="form-group">
+          <label>Пароль</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+          />
+        </div>
+        {error && <p className="error">{error}</p>}
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? 'Вход…' : 'Войти'}
+        </button>
+      </form>
+      <p style={{ marginTop: '1rem' }}>
+        Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+      </p>
+    </div>
+  );
+}
