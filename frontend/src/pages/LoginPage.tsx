@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi } from '../lib/api';
+import { authApi, getApiErrorMessage } from '../lib/api';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,7 +21,7 @@ export function LoginPage() {
       if (data.user.role === 'COMPANY') navigate('/company');
       else navigate('/companies');
     } catch (err: unknown) {
-      setError(err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Ошибка входа');
+      setError(getApiErrorMessage(err, 'Ошибка входа'));
     } finally {
       setLoading(false);
     }

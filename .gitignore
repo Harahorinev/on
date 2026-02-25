@@ -7,3 +7,6 @@
 .DS_Store
 /frontend/.DS_Store
 /backend/.DS_Store
+/frontend/.env
+/backend/.env
+/DEPLOY.md

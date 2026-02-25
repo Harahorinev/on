@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { companiesApi } from '../lib/api';
+import { companiesApi, getApiErrorMessage } from '../lib/api';
 
 export function CreateCompanyForm({
   onSuccess,
@@ -22,7 +22,7 @@ export function CreateCompanyForm({
       await companiesApi.create({ name, description: description || undefined, timezone });
       onSuccess();
     } catch (err: unknown) {
-      setError(err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Ошибка создания');
+      setError(getApiErrorMessage(err, 'Ошибка создания'));
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { slotsApi } from '../lib/api';
+import { slotsApi, getApiErrorMessage } from '../lib/api';
 
 export function CreateSlotForm({
   companyId,
@@ -38,7 +38,7 @@ export function CreateSlotForm({
       });
       onSuccess();
     } catch (err: unknown) {
-      setError(err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Ошибка создания слота');
+      setError(getApiErrorMessage(err, 'Ошибка создания слота'));
     } finally {
       setLoading(false);
     }

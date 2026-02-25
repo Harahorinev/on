@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi } from '../lib/api';
+import { authApi, getApiErrorMessage } from '../lib/api';
 import type { UserRole } from '../lib/api';
 
 export function RegisterPage() {
@@ -28,7 +28,7 @@ export function RegisterPage() {
       if (data.user.role === 'COMPANY') navigate('/company');
       else navigate('/companies');
     } catch (err: unknown) {
-      setError(err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Ошибка регистрации');
+      setError(getApiErrorMessage(err, 'Ошибка регистрации'));
     } finally {
       setLoading(false);
     }

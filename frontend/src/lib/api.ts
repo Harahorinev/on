@@ -25,6 +25,15 @@ api.interceptors.response.use(
   }
 );
 
+/** Из ошибки API достаёт message или возвращает fallback (всегда string). */
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+    if (typeof msg === 'string') return msg;
+  }
+  return fallback;
+}
+
 export type UserRole = 'USER' | 'COMPANY';
 
 export interface User {
