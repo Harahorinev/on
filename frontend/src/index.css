@@ -304,3 +304,14 @@ input, textarea, select {
 .form-card-wide {
   max-width: 480px;
 }
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.form-group.mb-0 {
+  margin-bottom: 0;
+}

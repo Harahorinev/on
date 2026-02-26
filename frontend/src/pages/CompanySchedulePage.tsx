@@ -10,9 +10,22 @@ const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
   CLOSED: 'Закрыт',
 };
 
+function toDateOnly(date: Date): string {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+}
+
+function dateFromToISO(dateStr: string, endOfDay: boolean): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return date.toISOString();
+}
+
 export function CompanySchedulePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const today = toDateOnly(new Date());
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,12 +34,16 @@ export function CompanySchedulePage() {
   const load = useCallback(() => {
     if (!id) return;
     setLoading(true);
+    const params = {
+      dateFrom: dateFromToISO(dateFrom, false),
+      dateTo: dateFromToISO(dateTo, true),
+    };
     slotsApi
-      .list(id)
+      .list(id, params)
       .then((r) => setSlots(r.data))
       .catch(() => setError('Не удалось загрузить расписание'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, dateFrom, dateTo]);
 
   useEffect(() => load(), [load]);
 
@@ -52,6 +69,29 @@ export function CompanySchedulePage() {
     <>
       <h1>Расписание компании</h1>
       {error && <p className="error">{error}</p>}
+      <div className="card mb-1">
+        <p className="text-sm mt-0 mb-half text-muted">Показать слоты за период</p>
+        <div className="filter-row">
+          <div className="form-group mb-0">
+            <label htmlFor="schedule-date-from">С</label>
+            <input
+              id="schedule-date-from"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+          <div className="form-group mb-0">
+            <label htmlFor="schedule-date-to">По</label>
+            <input
+              id="schedule-date-to"
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
       <div className="stack">
         {slots.map((slot) => {
           const start = new Date(slot.startAt);
