@@ -1,12 +1,18 @@
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = process.env.DB_PATH ?? path.join(__dirname, "..", "data.db");
+const dbPathResolved = path.resolve(dbPath);
+const dbDir = path.dirname(dbPathResolved);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 
-export const db = new Database(dbPath);
+export const db = new Database(dbPathResolved);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

@@ -31,8 +31,17 @@ authRouter.post("/register", (req, res) => {
     const user = createUser(email, password, name, role);
     const accessToken = signToken(user);
     res.status(201).json({ accessToken, user });
-  } catch (e) {
+  } catch (e: unknown) {
     console.error("Register error:", e);
+    const err = e as { code?: string; message?: string };
+    if (err?.code === "SQLITE_CANTOPEN" || err?.message?.includes("directory") || err?.message?.includes("ENOENT")) {
+      res.status(500).json({ message: "Database path invalid or not writable. Check DB_PATH and permissions." });
+      return;
+    }
+    if (err?.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      res.status(409).json({ message: "Email already registered" });
+      return;
+    }
     res.status(500).json({ message: "Registration failed" });
   }
 });
