@@ -56,11 +56,18 @@ export function CompanySchedulePage() {
 
   useEffect(() => load(), [load]);
 
-  const handleBook = async (slotId: string) => {
+  const handleBook = async (slot: ScheduleSlot) => {
     if (!user || user.role !== 'USER') return;
-    setBookingSlotId(slotId);
+    const start = new Date(slot.startAt);
+    const end = new Date(slot.endAt);
+    const companyName = company?.name ?? 'Компания';
+    const slotTitle = slot.title || 'Слот';
+    const message = `Записаться на «${slotTitle}» в ${companyName}\n${start.toLocaleString('ru')} – ${end.toLocaleString('ru')}?`;
+    if (!window.confirm(message)) return;
+    setBookingSlotId(slot.id);
     try {
-      await bookingsApi.create(slotId);
+      await bookingsApi.create(slot.id);
+      setError('');
       load();
     } catch {
       setError('Не удалось записаться на слот');
@@ -133,7 +140,7 @@ export function CompanySchedulePage() {
                     type="button"
                     className="btn btn-primary"
                     disabled={isBooking}
-                    onClick={() => handleBook(slot.id)}
+                    onClick={() => handleBook(slot)}
                   >
                     {isBooking ? 'Запись…' : 'Записаться'}
                   </button>

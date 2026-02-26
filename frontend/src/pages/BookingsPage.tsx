@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { bookingsApi } from '../lib/api';
 import type { Booking } from '../lib/api';
 
@@ -36,7 +37,12 @@ export function BookingsPage() {
 
   return (
     <>
-      <h1>Мои записи</h1>
+      <div className="row-between mb-1">
+        <h1 className="m-0">Мои записи</h1>
+        <Link to="/companies" className="btn btn-primary">
+          Записаться на слот
+        </Link>
+      </div>
       {error && <p className="error">{error}</p>}
       <div className="stack">
         {bookings.map((b) => {
@@ -70,7 +76,12 @@ export function BookingsPage() {
             </div>
           );
         })}
-        {bookings.length === 0 && <p>У вас пока нет записей.</p>}
+        {bookings.length === 0 && (
+          <p>
+            У вас пока нет записей.{' '}
+            <Link to="/companies">Записаться на слот</Link>
+          </p>
+        )}
       </div>
     </>
   );
