@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { slotsApi, bookingsApi } from '../lib/api';
-import type { ScheduleSlot } from '../lib/api';
+import type { ScheduleSlot, SlotStatus } from '../lib/api';
+
+const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
+  OPEN: 'Открыт',
+  CANCELLED: 'Отменён',
+  CLOSED: 'Закрыт',
+};
 
 export function CompanySchedulePage() {
   const { id } = useParams<{ id: string }>();
@@ -66,8 +72,11 @@ export function CompanySchedulePage() {
                   </p>
                   {slot.description && <p style={{ margin: 0, fontSize: '0.9rem' }}>{slot.description}</p>}
                   <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem' }}>
-                    Мест: {booked} / {slot.capacity}
+                    Статус: {SLOT_STATUS_LABEL[slot.status]}
                     {isPast && ' (прошедший)'}
+                  </p>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem' }}>
+                    Мест: {booked} / {slot.capacity}
                   </p>
                 </div>
                 {canBook && (
