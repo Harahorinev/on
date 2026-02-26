@@ -177,6 +177,10 @@ input, textarea, select {
   border: 1px solid var(--blue-200);
 }
 
+.calendar-event--personal {
+  border-left: 3px solid var(--blue-400);
+}
+
 .calendar-event-time {
   font-size: 0.78rem;
   color: var(--blue-700);

@@ -5,13 +5,23 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.DB_PATH ?? path.join(__dirname, "..", "data.db");
-const dbPathResolved = path.resolve(dbPath);
-const dbDir = path.dirname(dbPathResolved);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+const defaultDbPath = path.join(__dirname, "..", "data.db");
+
+function resolveDbPath(): string {
+  const fromEnv = process.env.DB_PATH;
+  if (!fromEnv) return path.resolve(defaultDbPath);
+  const resolved = path.resolve(fromEnv);
+  const dbDir = path.dirname(resolved);
+  try {
+    if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+    return resolved;
+  } catch {
+    console.warn("DB_PATH directory not writable, using default:", defaultDbPath);
+    return path.resolve(defaultDbPath);
+  }
 }
 
+const dbPathResolved = resolveDbPath();
 export const db = new Database(dbPathResolved);
 
 db.exec(`
@@ -70,7 +80,18 @@ db.exec(`
     PRIMARY KEY (employee_id, direction_id)
   );
 
+  CREATE TABLE IF NOT EXISTS user_events (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    title TEXT NOT NULL,
+    description TEXT,
+    start_at TEXT NOT NULL,
+    end_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id);
+  CREATE INDEX IF NOT EXISTS idx_user_events_user ON user_events(user_id);
   CREATE INDEX IF NOT EXISTS idx_slots_company ON slots(company_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_slot ON bookings(slot_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);

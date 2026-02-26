@@ -80,6 +80,16 @@ export interface Booking {
   slot?: ScheduleSlot & { company?: { id: string; name: string } };
 }
 
+export interface UserEvent {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  startAt: string;
+  endAt: string;
+  createdAt: string;
+}
+
 export const authApi = {
   register: (data: { email: string; password: string; name: string; role: UserRole }) =>
     api.post<{ accessToken: string; user: User }>('/auth/register', data),
@@ -114,4 +124,15 @@ export const bookingsApi = {
   get: (id: string) => api.get<Booking>(`/bookings/${id}`),
   create: (slotId: string) => api.post<Booking>(`/slots/${slotId}/bookings`),
   cancel: (id: string) => api.delete<Booking>(`/bookings/${id}`),
+};
+
+export const userEventsApi = {
+  list: (params?: { dateFrom?: string; dateTo?: string }) =>
+    api.get<UserEvent[]>('/user/events', { params }),
+  create: (data: { title: string; description?: string; startAt: string; endAt: string }) =>
+    api.post<UserEvent>('/user/events', data),
+  get: (id: string) => api.get<UserEvent>(`/user/events/${id}`),
+  update: (id: string, data: { title?: string; description?: string; startAt?: string; endAt?: string }) =>
+    api.patch<UserEvent>(`/user/events/${id}`, data),
+  delete: (id: string) => api.delete(`/user/events/${id}`),
 };

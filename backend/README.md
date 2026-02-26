@@ -24,6 +24,7 @@ npm run dev
 - `GET /slots/:id` — слот по id
 - `POST /slots/:slotId/bookings` — записаться на слот
 - `GET /bookings/me`, `GET/DELETE /bookings/:id` — мои записи
+- `GET/POST /user/events`, `GET/PATCH/DELETE /user/events/:id` — личные события пользователя (только роль USER)
 - `GET /health` — проверка работы
 
 ## Скрипты

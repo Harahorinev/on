@@ -8,6 +8,7 @@ import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
 import { companiesRouter } from "./routes/companies.js";
 import { directionsRouter } from "./routes/directions.js";
 import { getSlotById, slotsRouter } from "./routes/slots.js";
+import { userEventsRouter } from "./routes/userEvents.js";
 
 const app = express();
 const port = process.env.PORT ?? 3001;
@@ -24,6 +25,7 @@ app.use("/companies", companiesRouter);
 app.get("/slots/:id", getSlotById);
 app.post("/slots/:slotId/bookings", authMiddleware, createBookingForSlot);
 app.use("/bookings", bookingsRouter);
+app.use("/user/events", authMiddleware, userEventsRouter);
 
 companiesRouter.use("/:companyId/slots", slotsRouter);
 companiesRouter.use("/:companyId/directions", directionsRouter);
