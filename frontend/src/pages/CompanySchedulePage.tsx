@@ -52,7 +52,7 @@ export function CompanySchedulePage() {
     <>
       <h1>Расписание компании</h1>
       {error && <p className="error">{error}</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="stack">
         {slots.map((slot) => {
           const start = new Date(slot.startAt);
           const end = new Date(slot.endAt);
@@ -64,18 +64,18 @@ export function CompanySchedulePage() {
 
           return (
             <div key={slot.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div className="row-between">
                 <div>
                   <strong>{slot.title || 'Слот'}</strong>
-                  <p style={{ margin: '0.25rem 0', color: '#666' }}>
+                  <p className="text-muted">
                     {start.toLocaleString('ru')} – {end.toLocaleString('ru')}
                   </p>
-                  {slot.description && <p style={{ margin: 0, fontSize: '0.9rem' }}>{slot.description}</p>}
-                  <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem' }}>
+                  {slot.description && <p className="text-xs m-0">{slot.description}</p>}
+                  <p className="text-sm mt-half m-0">
                     Статус: {SLOT_STATUS_LABEL[slot.status]}
                     {isPast && ' (прошедший)'}
                   </p>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem' }}>
+                  <p className="text-sm mt-half m-0">
                     Мест: {booked} / {slot.capacity}
                   </p>
                 </div>

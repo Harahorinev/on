@@ -79,11 +79,11 @@ export function CompanyPage() {
           onCancel={() => setShowSlotForm(false)}
         />
       ) : (
-        <button type="button" className="btn btn-primary" onClick={() => setShowSlotForm(true)} style={{ marginBottom: '1rem' }}>
+        <button type="button" className="btn btn-primary mb-1" onClick={() => setShowSlotForm(true)}>
           Добавить слот
         </button>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="stack">
         {slots.map((slot) => {
           const start = new Date(slot.startAt);
           const end = new Date(slot.endAt);
@@ -91,10 +91,10 @@ export function CompanyPage() {
           return (
             <div key={slot.id} className="card">
               <strong>{slot.title || 'Слот'}</strong>
-              <p style={{ margin: '0.25rem 0', color: '#666' }}>
+              <p className="text-muted">
                 {start.toLocaleString('ru')} – {end.toLocaleString('ru')}
               </p>
-              <p style={{ margin: 0, fontSize: '0.875rem' }}>
+              <p className="text-sm m-0">
                 Записано: {booked} / {slot.capacity}, статус: {slot.status}
               </p>
             </div>

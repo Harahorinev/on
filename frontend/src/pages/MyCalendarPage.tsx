@@ -98,8 +98,8 @@ export function MyCalendarPage() {
     <>
       <h1>Мой календарь</h1>
       {error && <p className="error">{error}</p>}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="page-toolbar">
+        <div className="row">
           <button type="button" className="btn btn-secondary" onClick={handlePrevWeek}>
             ← Неделя назад
           </button>
@@ -110,48 +110,32 @@ export function MyCalendarPage() {
             Вперёд →
           </button>
         </div>
-        <div style={{ fontSize: '0.9rem', color: '#666' }}>
+        <div className="calendar-week-label">
           Неделя с{' '}
           {weekDays[0].toLocaleDateString('ru', { day: '2-digit', month: 'short' })} по{' '}
           {weekDays[6].toLocaleDateString('ru', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="calendar-grid">
         {weekDays.map((day) => {
           const dayItems = items.filter((item) => isSameDay(item.start, day));
           return (
-            <div key={day.toISOString()} className="card" style={{ minHeight: '120px' }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>
-                  {day.toLocaleDateString('ru', {
-                    weekday: 'short',
-                    day: '2-digit',
-                    month: 'short',
-                  })}
-                </strong>
+            <div key={day.toISOString()} className="card card-calendar-day">
+              <div className="calendar-day-header mb-half">
+                {day.toLocaleDateString('ru', {
+                  weekday: 'short',
+                  day: '2-digit',
+                  month: 'short',
+                })}
               </div>
               {dayItems.length === 0 ? (
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#9CA3AF' }}>Нет событий</p>
+                <p className="calendar-empty">Нет событий</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="calendar-events">
                   {dayItems.map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        padding: '0.4rem 0.5rem',
-                        borderRadius: 6,
-                        backgroundColor: 'rgba(76, 111, 255, 0.06)',
-                        border: '1px solid rgba(76, 111, 255, 0.25)',
-                      }}
-                    >
-                      <div style={{ fontSize: '0.78rem', color: '#4B5563', marginBottom: '0.1rem' }}>
+                    <div key={item.id} className="calendar-event">
+                      <div className="calendar-event-time">
                         {item.start.toLocaleTimeString('ru', {
                           hour: '2-digit',
                           minute: '2-digit',
@@ -162,7 +146,7 @@ export function MyCalendarPage() {
                           minute: '2-digit',
                         })}
                       </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.title}</div>
+                      <div className="calendar-event-title">{item.title}</div>
                     </div>
                   ))}
                 </div>

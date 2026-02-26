@@ -28,7 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
             <span className="nav-user">
               {user.name} ({user.role === 'USER' ? 'Пользователь' : 'Компания'})
-              <button type="button" className="btn btn-secondary" onClick={handleLogout} style={{ marginLeft: '1rem' }}>
+              <button type="button" className="btn btn-secondary ml-1" onClick={handleLogout}>
                 Выйти
               </button>
             </span>
@@ -40,7 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </>
         )}
       </nav>
-      <main className="container" style={{ paddingTop: '1.5rem' }}>
+      <main className="container pt-main">
         {children}
       </main>
     </>

@@ -45,7 +45,7 @@ export function CreateSlotForm({
   };
 
   return (
-    <div className="card" style={{ maxWidth: 480, marginBottom: '1rem' }}>
+    <div className="card form-card-wide mb-1">
       <h3>Новый слот</h3>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -91,7 +91,7 @@ export function CreateSlotForm({
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Создание…' : 'Создать слот'}
         </button>
-        <button type="button" className="btn btn-secondary" onClick={onCancel} style={{ marginLeft: '0.5rem' }}>
+        <button type="button" className="btn btn-secondary ml-half" onClick={onCancel}>
           Отмена
         </button>
       </form>

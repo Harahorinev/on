@@ -29,7 +29,7 @@ export function CreateCompanyForm({
   };
 
   return (
-    <div className="card" style={{ maxWidth: 480 }}>
+    <div className="card form-card-wide">
       <h3>Новая компания</h3>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -52,7 +52,7 @@ export function CreateCompanyForm({
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Создание…' : 'Создать'}
         </button>
-        <button type="button" className="btn btn-secondary" onClick={onCancel} style={{ marginLeft: '0.5rem' }}>
+        <button type="button" className="btn btn-secondary ml-half" onClick={onCancel}>
           Отмена
         </button>
       </form>

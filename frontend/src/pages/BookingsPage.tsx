@@ -38,23 +38,23 @@ export function BookingsPage() {
     <>
       <h1>Мои записи</h1>
       {error && <p className="error">{error}</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="stack">
         {bookings.map((b) => {
           const slot = b.slot;
           const start = slot?.startAt ? new Date(slot.startAt) : null;
           const end = slot?.endAt ? new Date(slot.endAt) : null;
-          const isBooked = b.status === 'BOOKED';
+          const isBooked = b.status === 'CONFIRMED';
 
           return (
             <div key={b.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div className="row-between">
                 <div>
                   <strong>{slot?.company?.name ?? 'Компания'}</strong>
                   {slot?.title && <span> — {slot.title}</span>}
-                  <p style={{ margin: '0.25rem 0', color: '#666' }}>
+                  <p className="text-muted">
                     {start && end ? `${start.toLocaleString('ru')} – ${end.toLocaleString('ru')}` : '—'}
                   </p>
-                  <p style={{ margin: 0, fontSize: '0.875rem' }}>Статус: {b.status}</p>
+                  <p className="text-sm m-0">Статус: {b.status}</p>
                 </div>
                 {isBooked && (
                   <button

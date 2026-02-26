@@ -28,8 +28,8 @@ export function LoginPage() {
   };
 
   return (
-    <div className="card" style={{ maxWidth: 400, margin: '2rem auto' }}>
-      <h1 style={{ marginTop: 0 }}>Вход</h1>
+    <div className="card form-card">
+      <h1 className="mt-0">Вход</h1>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Email</label>
@@ -56,7 +56,7 @@ export function LoginPage() {
           {loading ? 'Вход…' : 'Войти'}
         </button>
       </form>
-      <p style={{ marginTop: '1rem' }}>
+      <p className="mt-1">
         Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
       </p>
     </div>

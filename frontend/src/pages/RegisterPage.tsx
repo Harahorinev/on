@@ -35,8 +35,8 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="card" style={{ maxWidth: 400, margin: '2rem auto' }}>
-      <h1 style={{ marginTop: 0 }}>Регистрация</h1>
+    <div className="card form-card">
+      <h1 className="mt-0">Регистрация</h1>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Email</label>
@@ -80,7 +80,7 @@ export function RegisterPage() {
           {loading ? 'Регистрация…' : 'Зарегистрироваться'}
         </button>
       </form>
-      <p style={{ marginTop: '1rem' }}>
+      <p className="mt-1">
         Уже есть аккаунт? <Link to="/login">Войти</Link>
       </p>
     </div>

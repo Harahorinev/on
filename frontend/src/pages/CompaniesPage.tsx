@@ -22,10 +22,10 @@ export function CompaniesPage() {
   return (
     <>
       <h1>Компании</h1>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="stack">
         {companies.map((c) => (
           <div key={c.id} className="card">
-            <h3 style={{ marginTop: 0 }}>{c.name}</h3>
+            <h3 className="mt-0">{c.name}</h3>
             {c.description && <p>{c.description}</p>}
             <Link to={`/companies/${c.id}/schedule`} className="btn btn-primary">
               Расписание и запись
