@@ -19,6 +19,7 @@ npm run dev
 
 - `POST /auth/register`, `POST /auth/login` — регистрация и вход (JWT)
 - `GET/POST /companies`, `GET/PATCH /companies/me`, `GET /companies/:id` — компании
+- `GET/POST /companies/:companyId/directions`, `GET/PATCH/DELETE /companies/:companyId/directions/:directionId` — направления компании (CRUD; только владелец компании)
 - `GET/POST /companies/:id/slots`, `GET/PATCH/DELETE /companies/:id/slots/:slotId` — слоты
 - `GET /slots/:id` — слот по id
 - `POST /slots/:slotId/bookings` — записаться на слот

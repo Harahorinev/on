@@ -6,6 +6,7 @@ import { authMiddleware } from "./auth.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
 import { companiesRouter } from "./routes/companies.js";
+import { directionsRouter } from "./routes/directions.js";
 import { getSlotById, slotsRouter } from "./routes/slots.js";
 
 const app = express();
@@ -25,6 +26,7 @@ app.post("/slots/:slotId/bookings", authMiddleware, createBookingForSlot);
 app.use("/bookings", bookingsRouter);
 
 companiesRouter.use("/:companyId/slots", slotsRouter);
+companiesRouter.use("/:companyId/directions", directionsRouter);
 
 app.listen(port, () => {
   console.log(`Backend running at http://localhost:${port}`);

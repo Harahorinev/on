@@ -49,10 +49,26 @@ db.exec(`
     UNIQUE(slot_id, user_id)
   );
 
+  CREATE TABLE IF NOT EXISTS directions (
+    id TEXT PRIMARY KEY,
+    company_id TEXT NOT NULL REFERENCES companies(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS employee_directions (
+    employee_id TEXT NOT NULL,
+    direction_id TEXT NOT NULL REFERENCES directions(id),
+    PRIMARY KEY (employee_id, direction_id)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id);
   CREATE INDEX IF NOT EXISTS idx_slots_company ON slots(company_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_slot ON bookings(slot_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
+  CREATE INDEX IF NOT EXISTS idx_directions_company ON directions(company_id);
 `);
 
 export function uuid() {

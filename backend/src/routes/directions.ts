@@ -1,0 +1,150 @@
+import { Router, Request, Response } from "express";
+import { db, uuid } from "../db.js";
+import { authMiddleware } from "../auth.js";
+
+export const directionsRouter = Router({ mergeParams: true });
+
+function getCompanyId(req: Request): string {
+  return (req.params as { companyId: string }).companyId;
+}
+
+function ensureCompanyOwner(req: Request, res: Response): boolean {
+  const companyId = getCompanyId(req);
+  const company = db
+    .prepare("SELECT owner_id FROM companies WHERE id = ?")
+    .get(companyId) as { owner_id: string } | undefined;
+  if (!company) {
+    res.status(404).json({ message: "Company not found" });
+    return false;
+  }
+  if (company.owner_id !== req.userId) {
+    res.status(403).json({ message: "Forbidden" });
+    return false;
+  }
+  return true;
+}
+
+function directionToJson(row: { id: string; company_id: string; name: string; description: string | null; sort_order: number; created_at: string }) {
+  return {
+    id: row.id,
+    companyId: row.company_id,
+    name: row.name,
+    description: row.description ?? undefined,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+  };
+}
+
+directionsRouter.get("/", (req, res) => {
+  const companyId = getCompanyId(req);
+  const company = db.prepare("SELECT id FROM companies WHERE id = ?").get(companyId);
+  if (!company) {
+    res.status(404).json({ message: "Company not found" });
+    return;
+  }
+  const rows = db
+    .prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE company_id = ? ORDER BY sort_order, name")
+    .all(companyId) as Array<{ id: string; company_id: string; name: string; description: string | null; sort_order: number; created_at: string }>;
+  res.json(rows.map(directionToJson));
+});
+
+directionsRouter.get("/:directionId", (req, res) => {
+  const companyId = getCompanyId(req);
+  const { directionId } = req.params;
+  const row = db
+    .prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ? AND company_id = ?")
+    .get(directionId, companyId) as { id: string; company_id: string; name: string; description: string | null; sort_order: number; created_at: string } | undefined;
+  if (!row) {
+    res.status(404).json({ message: "Direction not found" });
+    return;
+  }
+  res.json(directionToJson(row));
+});
+
+directionsRouter.post("/", authMiddleware, (req, res) => {
+  if (req.userRole !== "COMPANY") {
+    res.status(403).json({ message: "Only COMPANY can manage directions" });
+    return;
+  }
+  if (!ensureCompanyOwner(req, res)) return;
+  const companyId = getCompanyId(req);
+  const { name, description, sortOrder } = req.body ?? {};
+  if (!name || typeof name !== "string" || !name.trim()) {
+    res.status(400).json({ message: "name required" });
+    return;
+  }
+  const id = uuid();
+  const sort = typeof sortOrder === "number" ? sortOrder : 0;
+  db.prepare(
+    "INSERT INTO directions (id, company_id, name, description, sort_order) VALUES (?, ?, ?, ?, ?)"
+  ).run(id, companyId, name.trim(), description?.trim() || null, sort);
+  const row = db.prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ?").get(id) as {
+    id: string;
+    company_id: string;
+    name: string;
+    description: string | null;
+    sort_order: number;
+    created_at: string;
+  };
+  res.status(201).json(directionToJson(row));
+});
+
+directionsRouter.patch("/:directionId", authMiddleware, (req, res) => {
+  if (req.userRole !== "COMPANY") {
+    res.status(403).json({ message: "Only COMPANY can manage directions" });
+    return;
+  }
+  if (!ensureCompanyOwner(req, res)) return;
+  const companyId = getCompanyId(req);
+  const { directionId } = req.params;
+  const existing = db.prepare("SELECT id FROM directions WHERE id = ? AND company_id = ?").get(directionId, companyId);
+  if (!existing) {
+    res.status(404).json({ message: "Direction not found" });
+    return;
+  }
+  const { name, description, sortOrder } = req.body ?? {};
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  if (name !== undefined) {
+    if (typeof name !== "string" || !name.trim()) {
+      res.status(400).json({ message: "name must be non-empty" });
+      return;
+    }
+    updates.push("name = ?");
+    values.push(name.trim());
+  }
+  if (description !== undefined) {
+    updates.push("description = ?");
+    values.push(description?.trim() || null);
+  }
+  if (sortOrder !== undefined) {
+    updates.push("sort_order = ?");
+    values.push(Number(sortOrder));
+  }
+  if (updates.length === 0) {
+    const row = db.prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ?").get(directionId) as any;
+    return res.json(directionToJson(row));
+  }
+  values.push(directionId);
+  db.prepare(`UPDATE directions SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+  const row = db.prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ?").get(directionId) as any;
+  res.json(directionToJson(row));
+});
+
+directionsRouter.delete("/:directionId", authMiddleware, (req, res) => {
+  if (req.userRole !== "COMPANY") {
+    res.status(403).json({ message: "Only COMPANY can manage directions" });
+    return;
+  }
+  if (!ensureCompanyOwner(req, res)) return;
+  const companyId = getCompanyId(req);
+  const { directionId } = req.params;
+  const existing = db.prepare("SELECT id FROM directions WHERE id = ? AND company_id = ?").get(directionId, companyId);
+  if (!existing) {
+    res.status(404).json({ message: "Direction not found" });
+    return;
+  }
+  db.prepare("DELETE FROM employee_directions WHERE direction_id = ?").run(directionId);
+  db.prepare("DELETE FROM directions WHERE id = ?").run(directionId);
+  res.status(204).send();
+});
