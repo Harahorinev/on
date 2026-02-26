@@ -19,6 +19,8 @@ export function BookingsPage() {
   useEffect(() => load(), [load]);
 
   const handleCancel = async (bookingId: string) => {
+    const confirmed = window.confirm('Вы уверены, что хотите отменить эту запись?');
+    if (!confirmed) return;
     setCancellingId(bookingId);
     try {
       await bookingsApi.cancel(bookingId);
