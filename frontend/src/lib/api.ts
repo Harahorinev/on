@@ -27,9 +27,13 @@ api.interceptors.response.use(
 
 /** Из ошибки API достаёт message или возвращает fallback (всегда string). */
 export function getApiErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-    if (typeof msg === 'string') return msg;
+  if (err && typeof err === 'object') {
+    const e = err as { response?: { data?: { message?: string }; status?: number }; message?: string };
+    const apiMsg = e.response?.data?.message;
+    if (typeof apiMsg === 'string') return apiMsg;
+    // Сетевая ошибка или ответ без body (например 500 с HTML)
+    if (e.response) return e.response.status ? `Ошибка сервера (${e.response.status})` : fallback;
+    if (typeof e.message === 'string' && e.message) return e.message;
   }
   return fallback;
 }

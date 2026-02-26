@@ -27,9 +27,14 @@ authRouter.post("/register", (req, res) => {
     res.status(409).json({ message: "Email already registered" });
     return;
   }
-  const user = createUser(email, password, name, role);
-  const accessToken = signToken(user);
-  res.status(201).json({ accessToken, user });
+  try {
+    const user = createUser(email, password, name, role);
+    const accessToken = signToken(user);
+    res.status(201).json({ accessToken, user });
+  } catch (e) {
+    console.error("Register error:", e);
+    res.status(500).json({ message: "Registration failed" });
+  }
 });
 
 authRouter.post("/login", (req, res) => {
