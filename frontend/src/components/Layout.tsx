@@ -20,6 +20,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <>
                 <Link to="/companies">Компании</Link>
                 <Link to="/bookings">Мои записи</Link>
+                <Link to="/calendar">Мой календарь</Link>
               </>
             )}
             {user.role === 'COMPANY' && (
