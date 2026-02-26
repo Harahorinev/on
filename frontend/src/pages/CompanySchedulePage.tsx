@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { slotsApi, bookingsApi } from '../lib/api';
-import type { ScheduleSlot, SlotStatus } from '../lib/api';
+import { slotsApi, bookingsApi, companiesApi } from '../lib/api';
+import type { Company, ScheduleSlot, SlotStatus } from '../lib/api';
 
 const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
   OPEN: 'Открыт',
@@ -24,12 +24,21 @@ export function CompanySchedulePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const today = toDateOnly(new Date());
+  const [company, setCompany] = useState<Company | null>(null);
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    companiesApi
+      .get(id)
+      .then((r) => setCompany(r.data))
+      .catch(() => setCompany(null));
+  }, [id]);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -67,7 +76,7 @@ export function CompanySchedulePage() {
 
   return (
     <>
-      <h1>Расписание компании</h1>
+      <h1>Расписание{company?.name ? ` — ${company.name}` : ''}</h1>
       {error && <p className="error">{error}</p>}
       <div className="card mb-1">
         <p className="text-sm mt-0 mb-half text-muted">Показать слоты за период</p>
