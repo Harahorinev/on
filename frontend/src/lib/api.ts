@@ -51,13 +51,15 @@ export interface Company {
   owner?: { id: string; email: string; name: string };
 }
 
+export type SlotStatus = 'OPEN' | 'CANCELLED' | 'CLOSED';
+
 export interface ScheduleSlot {
   id: string;
   companyId: string;
   startAt: string;
   endAt: string;
   capacity: number;
-  status: string;
+  status: SlotStatus;
   title?: string;
   description?: string;
   location?: string;

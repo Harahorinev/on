@@ -53,7 +53,7 @@ export function CompanySchedulePage() {
           const isPast = end <= now;
           const booked = slot.bookings?.length ?? 0;
           const free = slot.capacity - booked;
-          const canBook = user?.role === 'USER' && free > 0 && !isPast && slot.status === 'ACTIVE';
+          const canBook = user?.role === 'USER' && free > 0 && !isPast && slot.status === 'OPEN';
           const isBooking = bookingSlotId === slot.id;
 
           return (
