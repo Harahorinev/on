@@ -32,8 +32,9 @@ export function LoginPage() {
       <h1 className="mt-0">Вход</h1>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Email</label>
+          <label htmlFor="login-email">Email</label>
           <input
+            id="login-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -42,8 +43,9 @@ export function LoginPage() {
           />
         </div>
         <div className="form-group">
-          <label>Пароль</label>
+          <label htmlFor="login-password">Пароль</label>
           <input
+            id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
