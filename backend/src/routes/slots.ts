@@ -90,6 +90,21 @@ slotsRouter.post("/", authMiddleware, (req, res) => {
     res.status(400).json({ message: "startAt, endAt, capacity required" });
     return;
   }
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ message: "Invalid startAt or endAt" });
+    return;
+  }
+  if (end <= start) {
+    res.status(400).json({ message: "endAt must be after startAt" });
+    return;
+  }
+  const now = new Date();
+  if (start < now) {
+    res.status(400).json({ message: "startAt cannot be in the past" });
+    return;
+  }
   const id = uuid();
   db.prepare(
     "INSERT INTO slots (id, company_id, start_at, end_at, capacity, title, description, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
@@ -127,6 +142,23 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res) => {
     return;
   }
   const { startAt, endAt, capacity, status, title, description, location } = req.body ?? {};
+  if (startAt !== undefined || endAt !== undefined) {
+    const newStart = new Date(startAt ?? slot.start_at);
+    const newEnd = new Date(endAt ?? slot.end_at);
+    if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) {
+      res.status(400).json({ message: "Invalid startAt or endAt" });
+      return;
+    }
+    if (newEnd <= newStart) {
+      res.status(400).json({ message: "endAt must be after startAt" });
+      return;
+    }
+    const now = new Date();
+    if (newStart < now) {
+      res.status(400).json({ message: "startAt cannot be in the past" });
+      return;
+    }
+  }
   const updates: string[] = [];
   const values: unknown[] = [];
   if (startAt !== undefined) {

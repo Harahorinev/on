@@ -22,7 +22,18 @@ export function CreateSlotForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (new Date(endAt) <= new Date(startAt)) {
+    const start = new Date(startAt);
+    const end = new Date(endAt);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      setError('Неверный формат даты/времени');
+      return;
+    }
+    const now = new Date();
+    if (start < now) {
+      setError('Нельзя создавать слот в прошлом');
+      return;
+    }
+    if (end <= start) {
       setError('Время окончания должно быть позже начала');
       return;
     }
