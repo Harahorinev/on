@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { companiesApi, slotsApi } from '../lib/api';
-import type { Company, ScheduleSlot } from '../lib/api';
+import type { Company, ScheduleSlot, SlotStatus } from '../lib/api';
 import { CreateCompanyForm } from '../components/CreateCompanyForm';
 import { CreateSlotForm } from '../components/CreateSlotForm';
+
+const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
+  OPEN: 'Открыт',
+  CANCELLED: 'Отменён',
+  CLOSED: 'Закрыт',
+};
 
 export function CompanyPage() {
   const { user } = useAuth();
@@ -94,9 +100,8 @@ export function CompanyPage() {
               <p className="text-muted">
                 {start.toLocaleString('ru')} – {end.toLocaleString('ru')}
               </p>
-              <p className="text-sm m-0">
-                Записано: {booked} / {slot.capacity}, статус: {slot.status}
-              </p>
+              <p className="text-sm m-0">Записано: {booked} / {slot.capacity}</p>
+              <p className="text-sm m-0">Статус: {SLOT_STATUS_LABEL[slot.status]}</p>
             </div>
           );
         })}

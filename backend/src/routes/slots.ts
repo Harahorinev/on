@@ -159,6 +159,10 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res) => {
       return;
     }
   }
+  if (status !== undefined && status !== "OPEN" && status !== "CANCELLED" && status !== "CLOSED") {
+    res.status(400).json({ message: "Invalid status" });
+    return;
+  }
   const updates: string[] = [];
   const values: unknown[] = [];
   if (startAt !== undefined) {
