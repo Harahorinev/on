@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { slotsApi, getApiErrorMessage } from '../lib/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 export function CreateSlotForm({
   companyId,
@@ -10,6 +11,7 @@ export function CreateSlotForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
+  const { notifySuccess } = useNotifications();
   const [startAt, setStartAt] = useState('');
   const [endAt, setEndAt] = useState('');
   const [capacity, setCapacity] = useState(1);
@@ -47,6 +49,7 @@ export function CreateSlotForm({
         description: description || undefined,
         location: location || undefined,
       });
+      notifySuccess('Слот создан');
       onSuccess();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Ошибка создания слота'));

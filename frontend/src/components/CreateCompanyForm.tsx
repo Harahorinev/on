@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { companiesApi, getApiErrorMessage } from '../lib/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 export function CreateCompanyForm({
   onSuccess,
@@ -8,6 +9,7 @@ export function CreateCompanyForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
+  const { notifySuccess } = useNotifications();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [timezone, setTimezone] = useState('Europe/Moscow');
@@ -20,6 +22,7 @@ export function CreateCompanyForm({
     setLoading(true);
     try {
       await companiesApi.create({ name, description: description || undefined, timezone });
+      notifySuccess('Компания создана');
       onSuccess();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Ошибка создания'));

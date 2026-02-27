@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { slotsApi, bookingsApi, companiesApi } from '../lib/api';
+import { slotsApi, bookingsApi, companiesApi, getApiErrorMessage } from '../lib/api';
 import type { Company, ScheduleSlot, SlotStatus } from '../lib/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
   OPEN: 'Открыт',
@@ -23,6 +24,7 @@ function dateFromToISO(dateStr: string, endOfDay: boolean): string {
 export function CompanySchedulePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { notifySuccess } = useNotifications();
   const today = toDateOnly(new Date());
   const [company, setCompany] = useState<Company | null>(null);
   const [dateFrom, setDateFrom] = useState(today);
@@ -68,9 +70,10 @@ export function CompanySchedulePage() {
     try {
       await bookingsApi.create(slot.id);
       setError('');
+      notifySuccess('Вы записались на слот');
       load();
-    } catch {
-      setError('Не удалось записаться на слот');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Не удалось записаться на слот'));
     } finally {
       setBookingSlotId(null);
     }

@@ -110,9 +110,9 @@ export function createBookingForSlot(req: express.Request, res: express.Response
     return;
   }
   const existing = db
-    .prepare("SELECT id FROM bookings WHERE slot_id = ? AND user_id = ?")
-    .get(slotId, req.userId!);
-  if (existing) {
+    .prepare("SELECT id, status FROM bookings WHERE slot_id = ? AND user_id = ?")
+    .get(slotId, req.userId!) as { id: string; status: string } | undefined;
+  if (existing?.status === "CONFIRMED") {
     res.status(409).json({ message: "Already booked" });
     return;
   }
@@ -121,9 +121,15 @@ export function createBookingForSlot(req: express.Request, res: express.Response
     res.status(400).json({ message: "Slot is full" });
     return;
   }
-  const id = uuid();
-  db.prepare("INSERT INTO bookings (id, slot_id, user_id) VALUES (?, ?, ?)").run(id, slotId, req.userId!);
-  const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(id) as any;
+  let bookingId: string;
+  if (existing && existing.status === "CANCELLED") {
+    db.prepare("UPDATE bookings SET status = 'CONFIRMED' WHERE id = ?").run(existing.id);
+    bookingId = existing.id;
+  } else {
+    bookingId = uuid();
+    db.prepare("INSERT INTO bookings (id, slot_id, user_id) VALUES (?, ?, ?)").run(bookingId, slotId, req.userId!);
+  }
+  const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(bookingId) as any;
   const c = db.prepare("SELECT id, name FROM companies WHERE id = ?").get(slot.company_id) as { id: string; name: string };
   res.status(201).json(
     bookingToJson(row, {

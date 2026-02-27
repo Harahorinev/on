@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { bookingsApi } from '../lib/api';
 import type { Booking } from '../lib/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 export function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const { notifySuccess } = useNotifications();
 
   const load = useCallback(() => {
     bookingsApi
@@ -25,6 +27,7 @@ export function BookingsPage() {
     setCancellingId(bookingId);
     try {
       await bookingsApi.cancel(bookingId);
+      notifySuccess('Запись отменена');
       load();
     } catch {
       setError('Не удалось отменить запись');

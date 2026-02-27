@@ -29,14 +29,6 @@ function addDays(date: Date, days: number): Date {
   return d;
 }
 
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
 function toDateOnly(d: Date): string {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
@@ -271,7 +263,11 @@ export function MyCalendarPage() {
 
       <div className="calendar-grid">
         {weekDays.map((day) => {
-          const dayItems = items.filter((item) => isSameDay(item.start, day));
+          const dayStart = new Date(day);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(day);
+          dayEnd.setHours(23, 59, 59, 999);
+          const dayItems = items.filter((item) => item.start <= dayEnd && item.end >= dayStart);
           return (
             <div key={day.toISOString()} className="card card-calendar-day">
               <div className="calendar-day-header mb-half">
@@ -285,25 +281,29 @@ export function MyCalendarPage() {
                 <p className="calendar-empty">Нет событий</p>
               ) : (
                 <div className="calendar-events">
-                  {dayItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={'calendar-event' + (item.type === 'USER_EVENT' ? ' calendar-event--personal' : '')}
-                    >
-                      <div className="calendar-event-time">
-                        {item.start.toLocaleTimeString('ru', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}{' '}
-                        –{' '}
-                        {item.end.toLocaleTimeString('ru', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                  {dayItems.map((item) => {
+                    const displayStart = item.start < dayStart ? dayStart : item.start;
+                    const displayEnd = item.end > dayEnd ? dayEnd : item.end;
+                    return (
+                      <div
+                        key={item.id}
+                        className={'calendar-event' + (item.type === 'USER_EVENT' ? ' calendar-event--personal' : '')}
+                      >
+                        <div className="calendar-event-time">
+                          {displayStart.toLocaleTimeString('ru', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}{' '}
+                          –{' '}
+                          {displayEnd.toLocaleTimeString('ru', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                        <div className="calendar-event-title">{item.title}</div>
                       </div>
-                      <div className="calendar-event-title">{item.title}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
