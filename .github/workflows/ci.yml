@@ -78,7 +78,8 @@ jobs:
         working-directory: backend
         run: |
           node dist/index.js &
-          for i in $$(seq 1 30); do curl -sf http://127.0.0.1:3001/health && break; sleep 1; done
+          sleep 3
+          curl -sf http://127.0.0.1:3001/health
 
       - name: Install frontend & Playwright
         working-directory: frontend
