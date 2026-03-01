@@ -19,6 +19,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/contexts/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
     ignores: ['dist/**', 'node_modules/**', 'playwright-report/**', 'test-results/**', 'e2e/**'],
   }
 );

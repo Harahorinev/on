@@ -1,10 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import type { User } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from './Layout';
 
 vi.mock('../contexts/AuthContext');
+
+function mockAuth(overrides: { user?: User | null; logout?: () => void } = {}) {
+  return {
+    user: overrides.user ?? null,
+    token: null,
+    login: vi.fn(),
+    logout: overrides.logout ?? vi.fn(),
+    isReady: true,
+  };
+}
 
 function wrap(ui: React.ReactElement) {
   return render(<BrowserRouter>{ui}</BrowserRouter>);
@@ -12,10 +23,7 @@ function wrap(ui: React.ReactElement) {
 
 describe('Layout', () => {
   beforeEach(() => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      logout: vi.fn(),
-    } as any);
+    vi.mocked(useAuth).mockReturnValue(mockAuth({ user: null }));
   });
 
   it('без пользователя показывает Вход и Регистрация', () => {
@@ -30,10 +38,9 @@ describe('Layout', () => {
   });
 
   it('с пользователем USER показывает Компании, Мои записи, Мой календарь', () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: { id: '1', email: 'u@t.ru', name: 'User', role: 'USER' },
-      logout: vi.fn(),
-    } as any);
+    vi.mocked(useAuth).mockReturnValue(
+      mockAuth({ user: { id: '1', email: 'u@t.ru', name: 'User', role: 'USER' } })
+    );
     wrap(
       <Layout>
         <span>Контент</span>
