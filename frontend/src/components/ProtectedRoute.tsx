@@ -13,7 +13,7 @@ export function ProtectedRoute({
   const { user, isReady } = useAuth();
   const location = useLocation();
 
-  if (!isReady) return <p>Загрузка…</p>;
+  if (!isReady) return <p className="loading-placeholder">Загрузка…</p>;
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
   if (role && user.role !== role) return <Navigate to="/" replace />;
   return <>{children}</>;

@@ -149,7 +149,7 @@ export function MyCalendarPage() {
     }
   };
 
-  if (loading) return <p>Загрузка…</p>;
+  if (loading) return <p className="loading-placeholder">Загрузка…</p>;
 
   return (
     <>

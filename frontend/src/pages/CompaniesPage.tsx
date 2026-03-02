@@ -16,7 +16,7 @@ export function CompaniesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Загрузка…</p>;
+  if (loading) return <p className="loading-placeholder">Загрузка…</p>;
   if (error) return <p className="error">{error}</p>;
 
   return (

@@ -1,11 +1,39 @@
+/* F58: Design tokens and consistent styling */
 :root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: #111827;
   background-color: #f0f7ff;
 
-  /* Голубая палитра */
+  /* Spacing scale (rem) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 4px 16px rgba(15, 23, 42, 0.1);
+
+  /* Typography */
+  --text-xs: 0.8rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  /* Blue palette */
   --blue-50: #eff6ff;
   --blue-100: #dbeafe;
   --blue-200: #bfdbfe;
@@ -20,6 +48,13 @@
   --blue-card: #ffffff;
   --blue-border: #bfdbfe;
   --blue-border-light: #e0edff;
+
+  /* Semantic */
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-success: #166534;
+  --color-success-bg: #ecfdf3;
+  --color-success-border: #22c55e;
 }
 
 * {
@@ -31,9 +66,34 @@ body {
   min-height: 100vh;
 }
 
+/* Typography: headings and body */
+h1, h2, h3, h4 {
+  margin: 0 0 var(--space-2);
+  font-weight: 600;
+  line-height: 1.3;
+  color: #111827;
+}
+
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+h4 { font-size: var(--text-base); }
+
+p {
+  margin: 0 0 var(--space-2);
+  color: #374151;
+}
+
+.page-description {
+  font-size: var(--text-base);
+  color: #6b7280;
+  margin-bottom: var(--space-4);
+}
+
 a {
   color: var(--blue-600);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 a:hover {
@@ -44,34 +104,50 @@ a:hover {
 button {
   cursor: pointer;
   font: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 input, textarea, select {
   font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Layout */
 .container {
   max-width: 960px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--space-4);
 }
 
+/* Cards */
 .card {
   background: var(--blue-card);
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(76, 111, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--blue-border-light);
 }
 
+.card h3 {
+  margin-top: 0;
+  color: #111827;
+}
+
+/* Forms */
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
   font-weight: 500;
+  font-size: var(--text-sm);
   color: var(--blue-800);
 }
 
@@ -79,9 +155,9 @@ input, textarea, select {
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--blue-border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: #fff;
 }
 
@@ -93,12 +169,33 @@ input, textarea, select {
   box-shadow: 0 0 0 3px rgba(76, 111, 255, 0.15);
 }
 
+.form-card {
+  max-width: 400px;
+  margin: var(--space-6) auto;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.form-card-wide {
+  max-width: 520px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.form-card h1,
+.form-card-wide h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-4);
+}
+
+/* Buttons */
 .btn {
   display: inline-block;
-  padding: 0.5rem 1rem;
+  padding: var(--space-2) var(--space-4);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-weight: 500;
+  font-size: var(--text-sm);
 }
 
 .btn-primary {
@@ -106,7 +203,7 @@ input, textarea, select {
   color: #fff;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--blue-600);
 }
 
@@ -116,63 +213,76 @@ input, textarea, select {
   border: 1px solid var(--blue-200);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: var(--blue-200);
 }
 
 .btn-danger {
-  background: #dc2626;
+  background: var(--color-error);
   color: #fff;
 }
 
-.error {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
 }
 
-/* Шапка: светлая с голубым акцентом */
+/* Error text */
+.error {
+  color: var(--color-error);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+  padding: var(--space-2);
+  background: var(--color-error-bg);
+  border-radius: var(--radius-md);
+}
+
+/* Nav */
 .nav {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
   align-items: center;
-  padding: 0.75rem 1.5rem;
+  padding: var(--space-3) var(--space-5);
   background: var(--blue-card);
   border-bottom: 1px solid var(--blue-border-light);
-  box-shadow: 0 1px 3px rgba(76, 111, 255, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav a {
   color: var(--blue-800);
   font-weight: 500;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
 }
 
 .nav a:hover {
   color: var(--blue-600);
   text-decoration: none;
+  background: var(--blue-50);
+}
+
+.nav a.active {
+  color: var(--blue-600);
+  background: var(--blue-100);
 }
 
 .nav .nav-user {
   margin-left: auto;
   color: #374151;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .nav .nav-user .btn-secondary {
-  background: var(--blue-100);
-  color: var(--blue-800);
-  border-color: var(--blue-200);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
 }
 
-.nav .nav-user .btn-secondary:hover {
-  background: var(--blue-200);
-  color: var(--blue-900);
-}
-
-/* Блоки событий в календаре */
+/* Calendar */
 .calendar-event {
-  padding: 0.4rem 0.5rem;
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   background: var(--blue-50);
   border: 1px solid var(--blue-200);
 }
@@ -182,13 +292,13 @@ input, textarea, select {
 }
 
 .calendar-event-time {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   color: var(--blue-700);
-  margin-bottom: 0.1rem;
+  margin-bottom: var(--space-1);
 }
 
 .calendar-event-title {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: #111827;
 }
@@ -196,46 +306,48 @@ input, textarea, select {
 .calendar-day-header {
   color: var(--blue-800);
   font-weight: 600;
+  font-size: var(--text-sm);
 }
 
 .calendar-week-label {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--blue-700);
+  margin-bottom: var(--space-2);
 }
 
 .calendar-empty {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--blue-300);
 }
 
 .calendar-events {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .card-calendar-day {
   min-height: 120px;
 }
 
-/* Утилиты: раскладка */
+/* Layout utilities */
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .stack-sm {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .row-between {
@@ -243,7 +355,7 @@ input, textarea, select {
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .page-toolbar {
@@ -251,41 +363,40 @@ input, textarea, select {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .page-toolbar .row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
-/* Утилиты: отступы */
+/* Spacing utilities */
 .pt-main {
-  padding-top: 1.5rem;
+  padding-top: var(--space-5);
 }
 
 .mt-0 { margin-top: 0; }
 .mb-0 { margin-bottom: 0; }
 .m-0 { margin: 0; }
-.mb-1 { margin-bottom: 1rem; }
-.mb-half { margin-bottom: 0.5rem; }
-.mt-1 { margin-top: 1rem; }
-.mt-half { margin-top: 0.5rem; }
-.ml-half { margin-left: 0.5rem; }
-.ml-1 { margin-left: 1rem; }
+.mb-1 { margin-bottom: var(--space-4); }
+.mb-half { margin-bottom: var(--space-2); }
+.mt-1 { margin-top: var(--space-4); }
+.mt-half { margin-top: var(--space-2); }
+.ml-half { margin-left: var(--space-2); }
+.ml-1 { margin-left: var(--space-4); }
 
-/* Утилиты: типографика и карточки */
+/* Text utilities */
 .text-muted {
   color: var(--blue-700);
-  margin: 0.25rem 0;
+  margin: var(--space-1) 0;
+  font-size: var(--text-sm);
 }
 
 .text-muted.m-0 {
@@ -293,26 +404,17 @@ input, textarea, select {
 }
 
 .text-sm {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .text-xs {
-  font-size: 0.85rem;
-}
-
-.form-card {
-  max-width: 400px;
-  margin: 2rem auto;
-}
-
-.form-card-wide {
-  max-width: 480px;
+  font-size: var(--text-xs);
 }
 
 .filter-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-4);
   align-items: flex-end;
 }
 
@@ -320,28 +422,35 @@ input, textarea, select {
   margin-bottom: 0;
 }
 
-/* Toast уведомления */
+/* Loading state */
+.loading-placeholder {
+  color: #6b7280;
+  font-size: var(--text-base);
+  padding: var(--space-4) 0;
+}
+
+/* Toast */
 .toast-container {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
+  top: var(--space-4);
+  right: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
   z-index: 1000;
 }
 
 .toast {
   min-width: 220px;
   max-width: 320px;
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
-  font-size: 0.9rem;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
 }
 
 .toast-success {
-  background: #ecfdf3;
-  border: 1px solid #22c55e;
-  color: #166534;
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success);
 }

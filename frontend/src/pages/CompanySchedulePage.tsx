@@ -80,7 +80,7 @@ export function CompanySchedulePage() {
   };
 
   if (!id) return <p>Компания не указана</p>;
-  if (loading) return <p>Загрузка…</p>;
+  if (loading) return <p className="loading-placeholder">Загрузка…</p>;
 
   const now = new Date();
 

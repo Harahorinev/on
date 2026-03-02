@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -13,18 +13,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <nav className="nav">
-        <Link to="/">Расписание</Link>
+        <NavLink to="/" end>Расписание</NavLink>
         {user ? (
           <>
             {user.role === 'USER' && (
               <>
-                <Link to="/companies">Компании</Link>
-                <Link to="/bookings">Мои записи</Link>
-                <Link to="/calendar">Мой календарь</Link>
+                <NavLink to="/companies">Компании</NavLink>
+                <NavLink to="/bookings">Мои записи</NavLink>
+                <NavLink to="/calendar">Мой календарь</NavLink>
               </>
             )}
             {user.role === 'COMPANY' && (
-              <Link to="/company">Кабинет компании</Link>
+              <NavLink to="/company">Кабинет компании</NavLink>
             )}
             <span className="nav-user">
               {user.name} ({user.role === 'USER' ? 'Пользователь' : 'Компания'})
@@ -35,8 +35,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </>
         ) : (
           <>
-            <Link to="/login">Вход</Link>
-            <Link to="/register">Регистрация</Link>
+            <NavLink to="/login">Вход</NavLink>
+            <NavLink to="/register">Регистрация</NavLink>
           </>
         )}
       </nav>

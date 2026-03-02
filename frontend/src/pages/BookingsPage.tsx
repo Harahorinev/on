@@ -36,7 +36,7 @@ export function BookingsPage() {
     }
   };
 
-  if (loading) return <p>Загрузка…</p>;
+  if (loading) return <p className="loading-placeholder">Загрузка…</p>;
 
   return (
     <>

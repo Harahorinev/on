@@ -4,12 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 export function HomePage() {
   const { user, isReady } = useAuth();
 
-  if (!isReady) return <p>Загрузка…</p>;
+  if (!isReady) return <p className="loading-placeholder">Загрузка…</p>;
 
   return (
     <>
       <h1>Расписание</h1>
-      <p>Записывайтесь на слоты компаний или управляйте расписанием своей компании.</p>
+      <p className="page-description">Записывайтесь на слоты компаний или управляйте расписанием своей компании.</p>
       {user ? (
         <p>
           {user.role === 'USER' ? (

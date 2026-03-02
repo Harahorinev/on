@@ -45,7 +45,7 @@ export function CompanyPage() {
   if (user?.role !== 'COMPANY') {
     return <p>Доступ только для компании.</p>;
   }
-  if (loading) return <p>Загрузка…</p>;
+  if (loading) return <p className="loading-placeholder">Загрузка…</p>;
   if (error) return <p className="error">{error}</p>;
 
   if (!company) {
