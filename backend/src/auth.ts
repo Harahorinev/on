@@ -2,6 +2,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import express, { type Request } from "express";
 import jwt from "jsonwebtoken";
 import { db, uuid } from "./db.js";
+import { AppError } from "./errors.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
 const SALT_LEN = 16;
@@ -100,23 +101,23 @@ declare global {
 
 export function authMiddleware(
   req: Request,
-  res: express.Response,
+  _res: express.Response,
   next: express.NextFunction
 ): void {
   const auth = req.headers.authorization;
   const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
   if (!token) {
-    res.status(401).json({ message: "Unauthorized" });
+    next(new AppError(401, "Unauthorized"));
     return;
   }
   const payload = verifyToken(token);
   if (!payload) {
-    res.status(401).json({ message: "Invalid or expired token" });
+    next(new AppError(401, "Invalid or expired token"));
     return;
   }
   const row = findUserById(payload.sub);
   if (!row) {
-    res.status(401).json({ message: "User not found" });
+    next(new AppError(401, "User not found"));
     return;
   }
   req.user = rowToUser(row);

@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import "./db.js";
 import { authMiddleware } from "./auth.js";
+import { errorHandler, notFoundHandler } from "./errors.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
 import { companiesRouter } from "./routes/companies.js";
@@ -29,6 +30,9 @@ app.use("/user/events", authMiddleware, userEventsRouter);
 
 companiesRouter.use("/:companyId/slots", slotsRouter);
 companiesRouter.use("/:companyId/directions", directionsRouter);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`Backend running at http://localhost:${port}`);

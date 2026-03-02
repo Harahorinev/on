@@ -6,25 +6,26 @@ import {
   signToken,
   verifyPassword,
 } from "../auth.js";
+import { AppError } from "../errors.js";
 
 export const authRouter = Router();
 
-authRouter.post("/register", (req, res) => {
+authRouter.post("/register", (req, res, next) => {
   const { email, password, name, role } = req.body ?? {};
   if (!email || !password || !name || !role) {
-    res.status(400).json({ message: "email, password, name, role required" });
+    next(new AppError(400, "email, password, name, role required"));
     return;
   }
   if (!["USER", "COMPANY"].includes(role)) {
-    res.status(400).json({ message: "role must be USER or COMPANY" });
+    next(new AppError(400, "role must be USER or COMPANY"));
     return;
   }
   if (password.length < 6) {
-    res.status(400).json({ message: "password at least 6 characters" });
+    next(new AppError(400, "password at least 6 characters"));
     return;
   }
   if (findUserByEmail(email)) {
-    res.status(409).json({ message: "Email already registered" });
+    next(new AppError(409, "Email already registered"));
     return;
   }
   try {
@@ -32,29 +33,29 @@ authRouter.post("/register", (req, res) => {
     const accessToken = signToken(user);
     res.status(201).json({ accessToken, user });
   } catch (e: unknown) {
-    console.error("Register error:", e);
     const err = e as { code?: string; message?: string };
     if (err?.code === "SQLITE_CANTOPEN" || err?.message?.includes("directory") || err?.message?.includes("ENOENT")) {
-      res.status(500).json({ message: "Database path invalid or not writable. Check DB_PATH and permissions." });
+      next(new AppError(500, "Database path invalid or not writable. Check DB_PATH and permissions."));
       return;
     }
     if (err?.code === "SQLITE_CONSTRAINT_UNIQUE") {
-      res.status(409).json({ message: "Email already registered" });
+      next(new AppError(409, "Email already registered"));
       return;
     }
-    res.status(500).json({ message: "Registration failed" });
+    console.error("Register error:", e);
+    next(new AppError(500, "Registration failed"));
   }
 });
 
-authRouter.post("/login", (req, res) => {
+authRouter.post("/login", (req, res, next) => {
   const { email, password } = req.body ?? {};
   if (!email || !password) {
-    res.status(400).json({ message: "email and password required" });
+    next(new AppError(400, "email and password required"));
     return;
   }
   const row = findUserByEmail(email);
   if (!row || !verifyPassword(password, row.password_hash)) {
-    res.status(401).json({ message: "Invalid email or password" });
+    next(new AppError(401, "Invalid email or password"));
     return;
   }
   const user = rowToUser(row);
