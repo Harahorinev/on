@@ -240,6 +240,12 @@ input, textarea, select {
   box-shadow: var(--shadow-md);
 }
 
+.not-found-card {
+  max-width: 400px;
+  margin: var(--space-6) auto;
+  text-align: center;
+}
+
 .form-card h1,
 .form-card-wide h3 {
   margin-top: 0;

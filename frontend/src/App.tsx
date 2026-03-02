@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { Layout } from './components/Layout';
@@ -11,6 +11,7 @@ import { CompanySchedulePage } from './pages/CompanySchedulePage';
 import { BookingsPage } from './pages/BookingsPage';
 import { CompanyPage } from './pages/CompanyPage';
 import { MyCalendarPage } from './pages/MyCalendarPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 function App() {
   return (
@@ -58,7 +59,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Layout>
         </BrowserRouter>
