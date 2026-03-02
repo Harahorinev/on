@@ -1,8 +1,11 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { CompaniesPage } from './CompaniesPage';
 import { companiesApi } from '../lib/api';
+
+type CompaniesListResponse = Awaited<ReturnType<typeof companiesApi.list>>;
 
 vi.mock('../lib/api', () => ({
   companiesApi: { list: vi.fn() },
@@ -13,13 +16,13 @@ function wrap(ui: React.ReactElement) {
 }
 
 describe('CompaniesPage', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.mocked(companiesApi.list).mockResolvedValue({
       data: [
         { id: 'c1', name: 'Компания А', description: 'Описание', timezone: 'Europe/Moscow' },
-        { id: 'c2', name: 'Компания Б', description: null, timezone: 'UTC' },
+        { id: 'c2', name: 'Компания Б', timezone: 'UTC' },
       ],
-    });
+    } as unknown as CompaniesListResponse);
   });
 
   it('рендерит заголовок и список компаний после загрузки', async () => {
@@ -31,7 +34,7 @@ describe('CompaniesPage', () => {
   });
 
   it('при пустом списке показывает сообщение', async () => {
-    vi.mocked(companiesApi.list).mockResolvedValue({ data: [] });
+    vi.mocked(companiesApi.list).mockResolvedValue({ data: [] } as unknown as CompaniesListResponse);
     wrap(<CompaniesPage />);
     expect(await screen.findByText('Пока нет компаний.')).toBeInTheDocument();
   });

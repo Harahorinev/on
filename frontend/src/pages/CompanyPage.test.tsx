@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -35,9 +36,9 @@ describe('CompanyPage', () => {
       isReady: true,
     });
     vi.mocked(companiesApi.getMy).mockResolvedValue({
-      data: { id: 'c1', name: 'X', description: null, timezone: 'UTC' },
-    });
-    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] });
+      data: { id: 'c1', name: 'X', timezone: 'UTC' },
+    } as unknown as Awaited<ReturnType<typeof companiesApi.getMy>>);
+    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
     wrap(<CompanyPage />);
     expect(screen.getByText('Доступ только для компании.')).toBeInTheDocument();
   });
@@ -52,8 +53,8 @@ describe('CompanyPage', () => {
   it('при наличии компании показывает название и слоты', async () => {
     vi.mocked(companiesApi.getMy).mockResolvedValue({
       data: { id: 'c1', name: 'Моя компания', description: 'Описание', timezone: 'Europe/Moscow' },
-    });
-    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] });
+    } as unknown as Awaited<ReturnType<typeof companiesApi.getMy>>);
+    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
     wrap(<CompanyPage />);
     expect(await screen.findByRole('heading', { name: 'Моя компания' })).toBeInTheDocument();
     expect(await screen.findByText('Слоты расписания')).toBeInTheDocument();

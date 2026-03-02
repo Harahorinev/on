@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -36,9 +37,9 @@ describe('CompanySchedulePage', () => {
       isReady: true,
     });
     vi.mocked(companiesApi.get).mockResolvedValue({
-      data: { id: 'c1', name: 'Салон', description: null, timezone: 'Europe/Moscow' },
-    });
-    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] });
+      data: { id: 'c1', name: 'Салон', timezone: 'Europe/Moscow' },
+    } as unknown as Awaited<ReturnType<typeof companiesApi.get>>);
+    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
   });
 
   it('рендерит заголовок расписания и фильтр по датам', async () => {
@@ -49,7 +50,7 @@ describe('CompanySchedulePage', () => {
   });
 
   it('при пустом списке слотов показывает сообщение', async () => {
-    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] });
+    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
     wrap('c1');
     expect(await screen.findByText('Нет доступных слотов.')).toBeInTheDocument();
   });
