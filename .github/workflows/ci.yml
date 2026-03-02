@@ -112,8 +112,17 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_timeout: 5m
           script: |
-            cd /var/www/on
-            git pull origin main
-            cd backend && npm ci && npm run build && pm2 restart on-backend || true
+            set -e
+            cd /var/www/on || { echo "Directory /var/www/on not found"; exit 1; }
+            SAVED=$(git rev-parse HEAD)
+            trap 'cd /var/www/on && git reset --hard $SAVED && echo "Deploy failed, reverted to $SAVED"; exit 1' ERR
+            git fetch origin main
+            git reset --hard origin/main
+            echo "Building at commit: $(git rev-parse --short HEAD)"
+            cd backend && npm ci && npm run build
+            pm2 restart on-backend || true
             cd ../frontend && npm ci && npm run build
+            trap - ERR
+            echo "Deploy finished."
