@@ -39,8 +39,9 @@ export function RegisterPage() {
       <h1 className="mt-0">Регистрация</h1>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Email</label>
+          <label htmlFor="register-email">Email</label>
           <input
+            id="register-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -49,8 +50,9 @@ export function RegisterPage() {
           />
         </div>
         <div className="form-group">
-          <label>Пароль (не менее 6 символов)</label>
+          <label htmlFor="register-password">Пароль (не менее 6 символов)</label>
           <input
+            id="register-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -60,8 +62,9 @@ export function RegisterPage() {
           />
         </div>
         <div className="form-group">
-          <label>Имя</label>
+          <label htmlFor="register-name">Имя</label>
           <input
+            id="register-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -69,8 +72,8 @@ export function RegisterPage() {
           />
         </div>
         <div className="form-group">
-          <label>Регистрируюсь как</label>
-          <select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
+          <label htmlFor="register-role">Регистрируюсь как</label>
+          <select id="register-role" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
             <option value="USER">Пользователь (записываться на слоты)</option>
             <option value="COMPANY">Компания (выставлять расписание)</option>
           </select>

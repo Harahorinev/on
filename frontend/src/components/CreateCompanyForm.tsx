@@ -36,16 +36,16 @@ export function CreateCompanyForm({
       <h3>Новая компания</h3>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Название</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
+          <label htmlFor="company-name">Название</label>
+          <input id="company-name" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="form-group">
-          <label>Описание</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          <label htmlFor="company-description">Описание</label>
+          <textarea id="company-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
         </div>
         <div className="form-group">
-          <label>Часовой пояс</label>
-          <select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+          <label htmlFor="company-timezone">Часовой пояс</label>
+          <select id="company-timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
             <option value="UTC">UTC</option>
             <option value="Europe/Moscow">Europe/Moscow</option>
             <option value="Europe/Kyiv">Europe/Kyiv</option>

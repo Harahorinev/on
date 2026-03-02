@@ -63,8 +63,9 @@ export function CreateSlotForm({
       <h3>Новый слот</h3>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Начало (дата и время)</label>
+          <label htmlFor="slot-start">Начало (дата и время)</label>
           <input
+            id="slot-start"
             type="datetime-local"
             value={startAt}
             onChange={(e) => setStartAt(e.target.value)}
@@ -72,8 +73,9 @@ export function CreateSlotForm({
           />
         </div>
         <div className="form-group">
-          <label>Окончание (дата и время)</label>
+          <label htmlFor="slot-end">Окончание (дата и время)</label>
           <input
+            id="slot-end"
             type="datetime-local"
             value={endAt}
             onChange={(e) => setEndAt(e.target.value)}
@@ -81,8 +83,9 @@ export function CreateSlotForm({
           />
         </div>
         <div className="form-group">
-          <label>Количество мест</label>
+          <label htmlFor="slot-capacity">Количество мест</label>
           <input
+            id="slot-capacity"
             type="number"
             min={1}
             value={capacity}

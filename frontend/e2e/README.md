@@ -2,6 +2,8 @@
 
 **Unit-тесты (Vitest):** из папки `frontend`: `npm run test` (или `npm run test:watch` для режима наблюдения).
 
+**Конвенция:** для каждой новой страницы (`src/pages/*.tsx`) и компонента (`src/components/*.tsx`) добавлять файл `*.test.tsx` (см. задачу F66).
+
 ---
 
 # E2E-тесты (Playwright)
