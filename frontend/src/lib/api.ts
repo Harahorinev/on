@@ -34,15 +34,30 @@ api.interceptors.response.use(
   }
 );
 
-/** Из ошибки API достаёт message или возвращает fallback (всегда string). */
+type ApiErrorShape = {
+  response?: { data?: { message?: string }; status?: number };
+  message?: string;
+  code?: string;
+};
+
+/** Из ошибки API достаёт понятное сообщение, в т.ч. для сетевых сбоев. */
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
-    const e = err as { response?: { data?: { message?: string }; status?: number }; message?: string };
+    const e = err as ApiErrorShape;
     const apiMsg = e.response?.data?.message;
     if (typeof apiMsg === 'string') return apiMsg;
-    // Сетевая ошибка или ответ без body (например 500 с HTML)
-    if (e.response) return e.response.status ? `Ошибка сервера (${e.response.status})` : fallback;
-    if (typeof e.message === 'string' && e.message) return e.message;
+
+    if (e.response) {
+      if (e.response.status) return `Ошибка сервера (${e.response.status})`;
+      return fallback;
+    }
+
+    const msg = typeof e.message === 'string' ? e.message : '';
+    const lower = msg.toLowerCase();
+    if (e.code === 'ERR_NETWORK' || lower.includes('network error')) {
+      return 'Не удалось подключиться к серверу. Проверьте интернет или попробуйте позже.';
+    }
+    if (msg) return msg;
   }
   return fallback;
 }
