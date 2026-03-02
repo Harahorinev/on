@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CreateCompanyForm } from './CreateCompanyForm';
-import { companiesApi } from '../lib/api';
 
 vi.mock('../lib/api', () => ({
   companiesApi: { create: vi.fn() },

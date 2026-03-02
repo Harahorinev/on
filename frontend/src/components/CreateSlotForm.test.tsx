@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CreateSlotForm } from './CreateSlotForm';
-import { slotsApi } from '../lib/api';
 
 vi.mock('../lib/api', () => ({
   slotsApi: { create: vi.fn() },
