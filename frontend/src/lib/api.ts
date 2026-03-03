@@ -82,6 +82,13 @@ const API_ERROR_RU: Record<string, string> = {
   'Direction not found': 'Направление не найдено',
   'Only COMPANY can manage directions': 'Только компания может управлять направлениями',
   'name must be non-empty': 'Название не должно быть пустым',
+  'currentPassword and newPassword required': 'Укажите текущий и новый пароль',
+  'newPassword at least 6 characters': 'Новый пароль не менее 6 символов',
+  'Current password is incorrect': 'Текущий пароль неверный',
+  'notifyEmail must be boolean': 'Уведомления по email: да/нет',
+  'notifyInApp must be boolean': 'Уведомления в приложении: да/нет',
+  'calendarView must be week or month': 'Вид календаря: неделя или месяц',
+  'calendarRange must be 7, 14, or 30': 'Период календаря: 7, 14 или 30 дней',
 };
 
 /** Из ошибки API достаёт понятное сообщение на русском (в т.ч. перевод с бэка и сетевые сбои). */
@@ -206,4 +213,18 @@ export const userEventsApi = {
   update: (id: string, data: { title?: string; description?: string; startAt?: string; endAt?: string }) =>
     api.patch<UserEvent>(`/user/events/${id}`, data),
   delete: (id: string) => api.delete(`/user/events/${id}`),
+};
+
+export interface UserPreferences {
+  notifyEmail?: boolean;
+  notifyInApp?: boolean;
+  calendarView?: 'week' | 'month';
+  calendarRange?: number;
+}
+
+export const userApi = {
+  getPreferences: () => api.get<UserPreferences>('/user/preferences'),
+  patchPreferences: (data: UserPreferences) => api.patch<UserPreferences>('/user/preferences', data),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    api.patch('/user/password', data),
 };

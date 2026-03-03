@@ -55,6 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {user.role === 'COMPANY' && (
                 <NavLink to="/company" onClick={closeMenu}>Кабинет компании</NavLink>
               )}
+              <NavLink to="/settings" onClick={closeMenu}>Настройки</NavLink>
               <span className="nav-user">
                 <span className="nav-user-name" title={`${user.name} (${user.role === 'USER' ? 'Пользователь' : 'Компания'})`}>
                   {user.name} ({user.role === 'USER' ? 'Пользователь' : 'Компания'})

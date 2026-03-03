@@ -12,6 +12,7 @@ import { BookingsPage } from './pages/BookingsPage';
 import { CompanyPage } from './pages/CompanyPage';
 import { MyCalendarPage } from './pages/MyCalendarPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 function App() {
   return (
@@ -56,6 +57,14 @@ function App() {
                 element={
                   <ProtectedRoute role="COMPANY">
                     <CompanyPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
                   </ProtectedRoute>
                 }
               />
