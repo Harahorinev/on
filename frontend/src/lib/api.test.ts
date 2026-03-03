@@ -2,9 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { getApiErrorMessage } from './api';
 
 describe('getApiErrorMessage', () => {
-  it('uses API message when present', () => {
+  it('translates known API message to Russian', () => {
     const err = { response: { data: { message: 'Email already registered' }, status: 409 } };
-    expect(getApiErrorMessage(err, 'fallback')).toBe('Email already registered');
+    expect(getApiErrorMessage(err, 'fallback')).toBe('Этот email уже зарегистрирован');
+  });
+
+  it('returns API message as-is when not in translation map', () => {
+    const err = { response: { data: { message: 'Custom backend error' }, status: 400 } };
+    expect(getApiErrorMessage(err, 'fallback')).toBe('Custom backend error');
   });
 
   it('returns generic server error with status when no message body', () => {
