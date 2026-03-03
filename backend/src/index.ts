@@ -10,6 +10,7 @@ import { companiesRouter } from "./routes/companies.js";
 import { directionsRouter } from "./routes/directions.js";
 import { getSlotById, slotsRouter } from "./routes/slots.js";
 import { userEventsRouter } from "./routes/userEvents.js";
+import { userRouter } from "./routes/user.js";
 
 const app = express();
 const port = process.env.PORT ?? 3001;
@@ -27,6 +28,7 @@ app.get("/slots/:id", getSlotById);
 app.post("/slots/:slotId/bookings", authMiddleware, createBookingForSlot);
 app.use("/bookings", bookingsRouter);
 app.use("/user/events", authMiddleware, userEventsRouter);
+app.use("/user", userRouter);
 
 companiesRouter.use("/:companyId/slots", slotsRouter);
 companiesRouter.use("/:companyId/directions", directionsRouter);
@@ -34,6 +36,10 @@ companiesRouter.use("/:companyId/directions", directionsRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(port, () => {
-  console.log(`Backend running at http://localhost:${port}`);
-});
+export { app };
+
+if (process.env.NODE_ENV !== "test") {
+  app.listen(port, () => {
+    console.log(`Backend running at http://localhost:${port}`);
+  });
+}

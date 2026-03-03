@@ -89,6 +89,11 @@ export function rowToUser(row: UserRow): User {
   return { id: row.id, email: row.email, name: row.name, role: row.role };
 }
 
+export function updatePassword(userId: string, newPassword: string): void {
+  const hash = hashPassword(newPassword);
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, userId);
+}
+
 declare global {
   namespace Express {
     interface Request {
