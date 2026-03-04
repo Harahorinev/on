@@ -1,6 +1,7 @@
-import { Router, Request, Response } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
+import { AppError } from "../errors.js";
 
 export const userEventsRouter = Router();
 
@@ -24,9 +25,9 @@ function eventToJson(row: {
   };
 }
 
-userEventsRouter.get("/", authMiddleware, (req: Request, res: Response) => {
+userEventsRouter.get("/", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   if (req.userRole !== "USER") {
-    res.status(403).json({ message: "Only USER can have personal events" });
+    next(new AppError(403, "Only USER can have personal events"));
     return;
   }
   const { dateFrom, dateTo } = req.query as { dateFrom?: string; dateTo?: string };
@@ -53,28 +54,28 @@ userEventsRouter.get("/", authMiddleware, (req: Request, res: Response) => {
   res.json(rows.map(eventToJson));
 });
 
-userEventsRouter.post("/", authMiddleware, (req: Request, res: Response) => {
+userEventsRouter.post("/", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   if (req.userRole !== "USER") {
-    res.status(403).json({ message: "Only USER can create personal events" });
+    next(new AppError(403, "Only USER can create personal events"));
     return;
   }
   const { title, description, startAt, endAt } = req.body ?? {};
   if (!title || typeof title !== "string" || !title.trim()) {
-    res.status(400).json({ message: "title required" });
+    next(new AppError(400, "title required"));
     return;
   }
   if (!startAt || !endAt) {
-    res.status(400).json({ message: "startAt and endAt required" });
+    next(new AppError(400, "startAt and endAt required"));
     return;
   }
   const start = new Date(startAt);
   const end = new Date(endAt);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    res.status(400).json({ message: "Invalid startAt or endAt" });
+    next(new AppError(400, "Invalid startAt or endAt"));
     return;
   }
   if (end <= start) {
-    res.status(400).json({ message: "endAt must be after startAt" });
+    next(new AppError(400, "endAt must be after startAt"));
     return;
   }
   const id = uuid();
@@ -85,25 +86,25 @@ userEventsRouter.post("/", authMiddleware, (req: Request, res: Response) => {
   res.status(201).json(eventToJson(row));
 });
 
-userEventsRouter.get("/:id", authMiddleware, (req: Request, res: Response) => {
+userEventsRouter.get("/:id", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   const row = db
     .prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?")
     .get(req.params.id) as any;
   if (!row) {
-    res.status(404).json({ message: "Event not found" });
+    next(new AppError(404, "Event not found"));
     return;
   }
   if (row.user_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return;
   }
   res.json(eventToJson(row));
 });
 
-userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response) => {
+userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   const row = db.prepare("SELECT id, user_id FROM user_events WHERE id = ?").get(req.params.id) as any;
   if (!row || row.user_id !== req.userId) {
-    res.status(row ? 403 : 404).json({ message: row ? "Forbidden" : "Event not found" });
+    next(new AppError(row ? 403 : 404, row ? "Forbidden" : "Event not found"));
     return;
   }
   const { title, description, startAt, endAt } = req.body ?? {};
@@ -111,7 +112,7 @@ userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response) => 
   const values: unknown[] = [];
   if (title !== undefined) {
     if (typeof title !== "string" || !title.trim()) {
-      res.status(400).json({ message: "title must be non-empty" });
+      next(new AppError(400, "title must be non-empty"));
       return;
     }
     updates.push("title = ?");
@@ -124,7 +125,7 @@ userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response) => 
   if (startAt !== undefined) {
     const d = new Date(startAt);
     if (isNaN(d.getTime())) {
-      res.status(400).json({ message: "Invalid startAt" });
+      next(new AppError(400, "Invalid startAt"));
       return;
     }
     updates.push("start_at = ?");
@@ -133,7 +134,7 @@ userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response) => 
   if (endAt !== undefined) {
     const d = new Date(endAt);
     if (isNaN(d.getTime())) {
-      res.status(400).json({ message: "Invalid endAt" });
+      next(new AppError(400, "Invalid endAt"));
       return;
     }
     updates.push("end_at = ?");
@@ -149,10 +150,10 @@ userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response) => 
   res.json(eventToJson(updated));
 });
 
-userEventsRouter.delete("/:id", authMiddleware, (req: Request, res: Response) => {
+userEventsRouter.delete("/:id", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   const row = db.prepare("SELECT id, user_id FROM user_events WHERE id = ?").get(req.params.id) as any;
   if (!row || row.user_id !== req.userId) {
-    res.status(row ? 403 : 404).json({ message: row ? "Forbidden" : "Event not found" });
+    next(new AppError(row ? 403 : 404, row ? "Forbidden" : "Event not found"));
     return;
   }
   db.prepare("DELETE FROM user_events WHERE id = ?").run(req.params.id);

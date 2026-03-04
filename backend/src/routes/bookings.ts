@@ -2,6 +2,7 @@ import express from "express";
 import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
+import { AppError } from "../errors.js";
 
 export const bookingsRouter = Router();
 
@@ -59,7 +60,7 @@ bookingsRouter.get("/me", authMiddleware, (req, res) => {
   res.json(bookings);
 });
 
-bookingsRouter.get("/:id", authMiddleware, (req, res) => {
+bookingsRouter.get("/:id", authMiddleware, (req, res, next) => {
   const row = db
     .prepare(
       `SELECT b.*, s.id as s_id, s.company_id, s.start_at, s.end_at, s.capacity, s.status as s_status, s.title, s.description, s.location,
@@ -71,11 +72,11 @@ bookingsRouter.get("/:id", authMiddleware, (req, res) => {
     )
     .get(req.params.id) as any;
   if (!row) {
-    res.status(404).json({ message: "Booking not found" });
+    next(new AppError(404, "Booking not found"));
     return;
   }
   if (row.user_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return;
   }
   res.json(
@@ -94,31 +95,31 @@ bookingsRouter.get("/:id", authMiddleware, (req, res) => {
   );
 });
 
-export function createBookingForSlot(req: express.Request, res: express.Response) {
+export function createBookingForSlot(req: express.Request, res: express.Response, next: express.NextFunction) {
   const slotId = req.params.slotId;
   if (req.userRole !== "USER") {
-    res.status(403).json({ message: "Only USER can create bookings" });
+    next(new AppError(403, "Only USER can create bookings"));
     return;
   }
   const slot = db.prepare("SELECT * FROM slots WHERE id = ?").get(slotId) as any;
   if (!slot) {
-    res.status(404).json({ message: "Slot not found" });
+    next(new AppError(404, "Slot not found"));
     return;
   }
   if (slot.status !== "OPEN") {
-    res.status(400).json({ message: "Slot is not available" });
+    next(new AppError(400, "Slot is not available"));
     return;
   }
   const existing = db
     .prepare("SELECT id, status FROM bookings WHERE slot_id = ? AND user_id = ?")
     .get(slotId, req.userId!) as { id: string; status: string } | undefined;
   if (existing?.status === "CONFIRMED") {
-    res.status(409).json({ message: "Already booked" });
+    next(new AppError(409, "Already booked"));
     return;
   }
   const count = db.prepare("SELECT COUNT(*) as n FROM bookings WHERE slot_id = ? AND status = 'CONFIRMED'").get(slotId) as { n: number };
   if (count.n >= slot.capacity) {
-    res.status(400).json({ message: "Slot is full" });
+    next(new AppError(400, "Slot is full"));
     return;
   }
   let bookingId: string;
@@ -139,14 +140,14 @@ export function createBookingForSlot(req: express.Request, res: express.Response
   );
 }
 
-bookingsRouter.delete("/:id", authMiddleware, (req, res) => {
+bookingsRouter.delete("/:id", authMiddleware, (req, res, next) => {
   const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as any;
   if (!row) {
-    res.status(404).json({ message: "Booking not found" });
+    next(new AppError(404, "Booking not found"));
     return;
   }
   if (row.user_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return;
   }
   db.prepare("UPDATE bookings SET status = 'CANCELLED' WHERE id = ?").run(req.params.id);

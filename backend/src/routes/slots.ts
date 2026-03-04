@@ -2,6 +2,7 @@ import express from "express";
 import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
+import { AppError } from "../errors.js";
 
 export const slotsRouter = Router({ mergeParams: true });
 
@@ -20,23 +21,23 @@ export function slotToJson(row: any, company?: { id: string; name: string }) {
   };
 }
 
-export function getSlotById(req: express.Request, res: express.Response) {
+export function getSlotById(req: express.Request, res: express.Response, next: express.NextFunction) {
   const row = db
     .prepare(
       "SELECT s.*, c.id as cid, c.name as cname FROM slots s JOIN companies c ON s.company_id = c.id WHERE s.id = ?"
     )
     .get(req.params.id) as any;
   if (!row) {
-    res.status(404).json({ message: "Slot not found" });
+    next(new AppError(404, "Slot not found"));
     return;
   }
   res.json(slotToJson(row, { id: row.cid, name: row.cname }));
 }
 
-slotsRouter.get("/", (req, res) => {
+slotsRouter.get("/", (req, res, next) => {
   const companyId = (req.params as { companyId?: string }).companyId;
   if (!companyId) {
-    res.status(400).json({ message: "companyId required" });
+    next(new AppError(400, "companyId required"));
     return;
   }
   const { dateFrom, dateTo } = req.query as { dateFrom?: string; dateTo?: string };
@@ -59,50 +60,50 @@ slotsRouter.get("/", (req, res) => {
   res.json(slots);
 });
 
-slotsRouter.get("/:slotId", (req, res) => {
+slotsRouter.get("/:slotId", (req, res, next) => {
   const row = db
     .prepare(
       "SELECT s.*, c.id as cid, c.name as cname FROM slots s JOIN companies c ON s.company_id = c.id WHERE s.id = ?"
     )
     .get(req.params.slotId) as any;
   if (!row) {
-    res.status(404).json({ message: "Slot not found" });
+    next(new AppError(404, "Slot not found"));
     return;
   }
   res.json(slotToJson(row, { id: row.cid, name: row.cname }));
 });
 
-slotsRouter.post("/", authMiddleware, (req, res) => {
+slotsRouter.post("/", authMiddleware, (req, res, next) => {
   const companyId = req.params.companyId;
   const company = db.prepare("SELECT id, owner_id FROM companies WHERE id = ?").get(companyId) as
     | { id: string; owner_id: string }
     | undefined;
   if (!company) {
-    res.status(404).json({ message: "Company not found" });
+    next(new AppError(404, "Company not found"));
     return;
   }
   if (company.owner_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return;
   }
   const { startAt, endAt, capacity, title, description, location } = req.body ?? {};
   if (!startAt || !endAt || capacity == null) {
-    res.status(400).json({ message: "startAt, endAt, capacity required" });
+    next(new AppError(400, "startAt, endAt, capacity required"));
     return;
   }
   const start = new Date(startAt);
   const end = new Date(endAt);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    res.status(400).json({ message: "Invalid startAt or endAt" });
+    next(new AppError(400, "Invalid startAt or endAt"));
     return;
   }
   if (end <= start) {
-    res.status(400).json({ message: "endAt must be after startAt" });
+    next(new AppError(400, "endAt must be after startAt"));
     return;
   }
   const now = new Date();
   if (start < now) {
-    res.status(400).json({ message: "startAt cannot be in the past" });
+    next(new AppError(400, "startAt cannot be in the past"));
     return;
   }
   const id = uuid();
@@ -126,19 +127,19 @@ slotsRouter.post("/", authMiddleware, (req, res) => {
   res.status(201).json(slotToJson(row, c));
 });
 
-slotsRouter.patch("/:slotId", authMiddleware, (req, res) => {
+slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
   const companyId = req.params.companyId;
   const slotId = req.params.slotId;
   const company = db.prepare("SELECT owner_id FROM companies WHERE id = ?").get(companyId) as
     | { owner_id: string }
     | undefined;
   if (!company || company.owner_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return;
   }
   const slot = db.prepare("SELECT * FROM slots WHERE id = ? AND company_id = ?").get(slotId, companyId) as any;
   if (!slot) {
-    res.status(404).json({ message: "Slot not found" });
+    next(new AppError(404, "Slot not found"));
     return;
   }
   const { startAt, endAt, capacity, status, title, description, location } = req.body ?? {};
@@ -146,21 +147,21 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res) => {
     const newStart = new Date(startAt ?? slot.start_at);
     const newEnd = new Date(endAt ?? slot.end_at);
     if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) {
-      res.status(400).json({ message: "Invalid startAt or endAt" });
+      next(new AppError(400, "Invalid startAt or endAt"));
       return;
     }
     if (newEnd <= newStart) {
-      res.status(400).json({ message: "endAt must be after startAt" });
+      next(new AppError(400, "endAt must be after startAt"));
       return;
     }
     const now = new Date();
     if (newStart < now) {
-      res.status(400).json({ message: "startAt cannot be in the past" });
+      next(new AppError(400, "startAt cannot be in the past"));
       return;
     }
   }
   if (status !== undefined && status !== "OPEN" && status !== "CANCELLED" && status !== "CLOSED") {
-    res.status(400).json({ message: "Invalid status" });
+    next(new AppError(400, "Invalid status"));
     return;
   }
   const updates: string[] = [];
@@ -203,19 +204,19 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res) => {
   res.json(slotToJson(row, { id: row.cid, name: row.cname }));
 });
 
-slotsRouter.delete("/:slotId", authMiddleware, (req, res) => {
+slotsRouter.delete("/:slotId", authMiddleware, (req, res, next) => {
   const companyId = req.params.companyId;
   const slotId = req.params.slotId;
   const company = db.prepare("SELECT owner_id FROM companies WHERE id = ?").get(companyId) as
     | { owner_id: string }
     | undefined;
   if (!company || company.owner_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return;
   }
   const r = db.prepare("DELETE FROM slots WHERE id = ? AND company_id = ?").run(slotId, companyId);
   if (r.changes === 0) {
-    res.status(404).json({ message: "Slot not found" });
+    next(new AppError(404, "Slot not found"));
     return;
   }
   res.status(204).send();

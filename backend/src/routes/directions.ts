@@ -1,6 +1,7 @@
-import { Router, Request, Response } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
+import { AppError } from "../errors.js";
 
 export const directionsRouter = Router({ mergeParams: true });
 
@@ -8,17 +9,17 @@ function getCompanyId(req: Request): string {
   return (req.params as { companyId: string }).companyId;
 }
 
-function ensureCompanyOwner(req: Request, res: Response): boolean {
+function ensureCompanyOwner(req: Request, res: Response, next: NextFunction): boolean {
   const companyId = getCompanyId(req);
   const company = db
     .prepare("SELECT owner_id FROM companies WHERE id = ?")
     .get(companyId) as { owner_id: string } | undefined;
   if (!company) {
-    res.status(404).json({ message: "Company not found" });
+    next(new AppError(404, "Company not found"));
     return false;
   }
   if (company.owner_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return false;
   }
   return true;
@@ -35,11 +36,11 @@ function directionToJson(row: { id: string; company_id: string; name: string; de
   };
 }
 
-directionsRouter.get("/", (req, res) => {
+directionsRouter.get("/", (req, res, next) => {
   const companyId = getCompanyId(req);
   const company = db.prepare("SELECT id FROM companies WHERE id = ?").get(companyId);
   if (!company) {
-    res.status(404).json({ message: "Company not found" });
+    next(new AppError(404, "Company not found"));
     return;
   }
   const rows = db
@@ -48,29 +49,29 @@ directionsRouter.get("/", (req, res) => {
   res.json(rows.map(directionToJson));
 });
 
-directionsRouter.get("/:directionId", (req, res) => {
+directionsRouter.get("/:directionId", (req, res, next) => {
   const companyId = getCompanyId(req);
   const { directionId } = req.params;
   const row = db
     .prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ? AND company_id = ?")
     .get(directionId, companyId) as { id: string; company_id: string; name: string; description: string | null; sort_order: number; created_at: string } | undefined;
   if (!row) {
-    res.status(404).json({ message: "Direction not found" });
+    next(new AppError(404, "Direction not found"));
     return;
   }
   res.json(directionToJson(row));
 });
 
-directionsRouter.post("/", authMiddleware, (req, res) => {
+directionsRouter.post("/", authMiddleware, (req, res, next) => {
   if (req.userRole !== "COMPANY") {
-    res.status(403).json({ message: "Only COMPANY can manage directions" });
+    next(new AppError(403, "Only COMPANY can manage directions"));
     return;
   }
-  if (!ensureCompanyOwner(req, res)) return;
+  if (!ensureCompanyOwner(req, res, next)) return;
   const companyId = getCompanyId(req);
   const { name, description, sortOrder } = req.body ?? {};
   if (!name || typeof name !== "string" || !name.trim()) {
-    res.status(400).json({ message: "name required" });
+    next(new AppError(400, "name required"));
     return;
   }
   const id = uuid();
@@ -89,17 +90,17 @@ directionsRouter.post("/", authMiddleware, (req, res) => {
   res.status(201).json(directionToJson(row));
 });
 
-directionsRouter.patch("/:directionId", authMiddleware, (req, res) => {
+directionsRouter.patch("/:directionId", authMiddleware, (req, res, next) => {
   if (req.userRole !== "COMPANY") {
-    res.status(403).json({ message: "Only COMPANY can manage directions" });
+    next(new AppError(403, "Only COMPANY can manage directions"));
     return;
   }
-  if (!ensureCompanyOwner(req, res)) return;
+  if (!ensureCompanyOwner(req, res, next)) return;
   const companyId = getCompanyId(req);
   const { directionId } = req.params;
   const existing = db.prepare("SELECT id FROM directions WHERE id = ? AND company_id = ?").get(directionId, companyId);
   if (!existing) {
-    res.status(404).json({ message: "Direction not found" });
+    next(new AppError(404, "Direction not found"));
     return;
   }
   const { name, description, sortOrder } = req.body ?? {};
@@ -107,7 +108,7 @@ directionsRouter.patch("/:directionId", authMiddleware, (req, res) => {
   const values: unknown[] = [];
   if (name !== undefined) {
     if (typeof name !== "string" || !name.trim()) {
-      res.status(400).json({ message: "name must be non-empty" });
+      next(new AppError(400, "name must be non-empty"));
       return;
     }
     updates.push("name = ?");
@@ -131,17 +132,17 @@ directionsRouter.patch("/:directionId", authMiddleware, (req, res) => {
   res.json(directionToJson(row));
 });
 
-directionsRouter.delete("/:directionId", authMiddleware, (req, res) => {
+directionsRouter.delete("/:directionId", authMiddleware, (req, res, next) => {
   if (req.userRole !== "COMPANY") {
-    res.status(403).json({ message: "Only COMPANY can manage directions" });
+    next(new AppError(403, "Only COMPANY can manage directions"));
     return;
   }
-  if (!ensureCompanyOwner(req, res)) return;
+  if (!ensureCompanyOwner(req, res, next)) return;
   const companyId = getCompanyId(req);
   const { directionId } = req.params;
   const existing = db.prepare("SELECT id FROM directions WHERE id = ? AND company_id = ?").get(directionId, companyId);
   if (!existing) {
-    res.status(404).json({ message: "Direction not found" });
+    next(new AppError(404, "Direction not found"));
     return;
   }
   db.prepare("DELETE FROM employee_directions WHERE direction_id = ?").run(directionId);

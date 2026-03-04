@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
+import { AppError } from "../errors.js";
 
 export const companiesRouter = Router();
 
@@ -33,7 +34,7 @@ companiesRouter.get("/", (_req, res) => {
   );
 });
 
-companiesRouter.get("/me", authMiddleware, (req, res) => {
+companiesRouter.get("/me", authMiddleware, (req, res, next) => {
   const row = db
     .prepare(
       "SELECT id, name, description, timezone, owner_id FROM companies WHERE owner_id = ?"
@@ -42,7 +43,7 @@ companiesRouter.get("/me", authMiddleware, (req, res) => {
     | { id: string; name: string; description: string | null; timezone: string; owner_id: string }
     | undefined;
   if (!row) {
-    res.status(404).json({ message: "Company not found" });
+    next(new AppError(404, "Company not found"));
     return;
   }
   const owner = db.prepare("SELECT id, email, name FROM users WHERE id = ?").get(row.owner_id) as {
@@ -59,7 +60,7 @@ companiesRouter.get("/me", authMiddleware, (req, res) => {
   });
 });
 
-companiesRouter.get("/:id", (req, res) => {
+companiesRouter.get("/:id", (req, res, next) => {
   const row = db
     .prepare(
       "SELECT c.id, c.name, c.description, c.timezone, c.owner_id, u.email as owner_email, u.name as owner_name FROM companies c JOIN users u ON c.owner_id = u.id WHERE c.id = ?"
@@ -76,7 +77,7 @@ companiesRouter.get("/:id", (req, res) => {
       }
     | undefined;
   if (!row) {
-    res.status(404).json({ message: "Company not found" });
+    next(new AppError(404, "Company not found"));
     return;
   }
   res.json({
@@ -88,19 +89,19 @@ companiesRouter.get("/:id", (req, res) => {
   });
 });
 
-companiesRouter.post("/", authMiddleware, (req, res) => {
+companiesRouter.post("/", authMiddleware, (req, res, next) => {
   if (req.userRole !== "COMPANY") {
-    res.status(403).json({ message: "Only COMPANY can create a company" });
+    next(new AppError(403, "Only COMPANY can create a company"));
     return;
   }
   const { name, description, timezone } = req.body ?? {};
   if (!name) {
-    res.status(400).json({ message: "name required" });
+    next(new AppError(400, "name required"));
     return;
   }
   const existing = db.prepare("SELECT id FROM companies WHERE owner_id = ?").get(req.userId!);
   if (existing) {
-    res.status(400).json({ message: "You already have a company" });
+    next(new AppError(400, "You already have a company"));
     return;
   }
   const id = uuid();
@@ -121,16 +122,16 @@ companiesRouter.post("/", authMiddleware, (req, res) => {
   });
 });
 
-companiesRouter.patch("/:id", authMiddleware, (req, res) => {
+companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
   const company = db
     .prepare("SELECT id, owner_id FROM companies WHERE id = ?")
     .get(req.params.id) as { id: string; owner_id: string } | undefined;
   if (!company) {
-    res.status(404).json({ message: "Company not found" });
+    next(new AppError(404, "Company not found"));
     return;
   }
   if (company.owner_id !== req.userId) {
-    res.status(403).json({ message: "Forbidden" });
+    next(new AppError(403, "Forbidden"));
     return;
   }
   const { name, description, timezone } = req.body ?? {};
