@@ -3,11 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { MyCalendarPage } from './MyCalendarPage';
-import { bookingsApi, userEventsApi } from '../lib/api';
+import { bookingsApi, userEventsApi, userApi } from '../lib/api';
 
 vi.mock('../lib/api', () => ({
   bookingsApi: { my: vi.fn() },
   userEventsApi: { list: vi.fn() },
+  userApi: {
+    getPreferences: vi.fn(),
+  },
 }));
 
 function wrap(ui: React.ReactElement) {
@@ -18,6 +21,7 @@ describe('MyCalendarPage', () => {
   beforeEach(() => {
     vi.mocked(bookingsApi.my).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof bookingsApi.my>>);
     vi.mocked(userEventsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof userEventsApi.list>>);
+    vi.mocked(userApi.getPreferences).mockResolvedValue({ data: {} } as Awaited<ReturnType<typeof userApi.getPreferences>>);
   });
 
   it('рендерит заголовок и кнопки навигации по неделе', async () => {
