@@ -12,22 +12,25 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('token');
+  });
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      localStorage.removeItem('user');
+      return null;
+    }
+  });
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const t = localStorage.getItem('token');
-    const u = localStorage.getItem('user');
-    if (t && u) {
-      try {
-        setToken(t);
-        setUser(JSON.parse(u));
-      } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsReady(true);
   }, []);
 

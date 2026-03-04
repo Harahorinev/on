@@ -23,7 +23,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!user) {
-      setInAppEnabled(true);
       return;
     }
     let cancelled = false;
@@ -44,7 +43,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     const handler = (event: Event) => {

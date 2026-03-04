@@ -40,6 +40,7 @@ export function CompanyPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => load(), [load]);
 
   if (user?.role !== 'COMPANY') {
