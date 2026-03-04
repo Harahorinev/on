@@ -15,8 +15,16 @@ import { userRouter } from "./routes/user.js";
 const app = express();
 const port = process.env.PORT ?? 3001;
 
-app.use(cors({ origin: true }));
-app.use(express.json());
+const isProduction = process.env.NODE_ENV === "production";
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.trim().split(/\s*,\s*/).filter(Boolean) ?? [];
+app.use(
+  cors({
+    origin: isProduction && allowedOrigins.length > 0
+      ? (origin, cb) => (!origin || allowedOrigins.includes(origin) ? cb(null, true) : cb(null, false))
+      : true,
+  })
+);
+app.use(express.json({ limit: "256kb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, timestamp: new Date().toISOString() });
