@@ -5,10 +5,10 @@ React (Vite + TypeScript) приложение для записи на слот
 ## Запуск
 
 1. Установить зависимости: `npm install`
-2. Запустить бэкенд (в папке `on-api`): `npm run start:dev`
+2. Запустить бэкенд (в папке `backend`): `npm run dev` (порт 3001 по умолчанию)
 3. Создать файл `.env` (по желанию):
    ```
-   VITE_API_URL=http://localhost:3000
+   VITE_API_URL=http://localhost:3001
    ```
 4. Запустить фронтенд: `npm run dev`  
    Приложение откроется на http://localhost:5173

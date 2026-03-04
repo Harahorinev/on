@@ -6,7 +6,7 @@ function getApiBaseUrl(): string {
   if (typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost')) {
     return window.location.origin + '/api';
   }
-  return 'http://localhost:3000';
+  return 'http://localhost:3001';
 }
 
 const baseURL = getApiBaseUrl();
