@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { bookingsApi, userEventsApi, getApiErrorMessage } from '../lib/api';
-import type { Booking, UserEvent } from '../lib/api';
+import { bookingsApi, userEventsApi, getApiErrorMessage, userApi } from '../lib/api';
+import type { Booking, UserEvent, UserPreferences } from '../lib/api';
 
 type CalendarItemType = 'BOOKING' | 'USER_EVENT';
 
@@ -38,13 +38,56 @@ export function MyCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [calendarRange, setCalendarRange] = useState<number>(7);
+  const [calendarView, setCalendarView] = useState<'week' | 'month'>('week');
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventFormError, setEventFormError] = useState('');
 
-  const weekDays = useMemo(() => {
+  const days = useMemo(() => {
     const start = startOfWeek(currentDate);
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  }, [currentDate]);
+    const length = calendarRange || 7;
+    return Array.from({ length }, (_, i) => addDays(start, i));
+  }, [currentDate, calendarRange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    userApi
+      .getPreferences()
+      .then((res) => {
+        if (cancelled) return;
+        const prefs = res.data ?? {};
+        if (prefs.calendarRange && (prefs.calendarRange === 7 || prefs.calendarRange === 14 || prefs.calendarRange === 30)) {
+          setCalendarRange(prefs.calendarRange);
+        }
+        if (prefs.calendarView === 'week' || prefs.calendarView === 'month') {
+          setCalendarView(prefs.calendarView);
+        }
+      })
+      .catch(() => {
+        // игнорируем, оставляем значения по умолчанию
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<UserPreferences | undefined>;
+      const prefs = custom.detail;
+      if (!prefs) return;
+      if (prefs.calendarRange && (prefs.calendarRange === 7 || prefs.calendarRange === 14 || prefs.calendarRange === 30)) {
+        setCalendarRange(prefs.calendarRange);
+      }
+      if (prefs.calendarView === 'week' || prefs.calendarView === 'month') {
+        setCalendarView(prefs.calendarView);
+      }
+    };
+    window.addEventListener('user:preferencesChanged', handler as EventListener);
+    return () => {
+      window.removeEventListener('user:preferencesChanged', handler as EventListener);
+    };
+  }, []);
 
   const [eventsError, setEventsError] = useState('');
 
@@ -52,11 +95,11 @@ export function MyCalendarPage() {
     setLoading(true);
     setError('');
     setEventsError('');
-    const weekStart = startOfWeek(currentDate);
-    const weekEnd = addDays(weekStart, 6);
-    const dateFrom = new Date(weekStart);
+    const periodStart = startOfWeek(currentDate);
+    const periodEnd = addDays(periodStart, (calendarRange || 7) - 1);
+    const dateFrom = new Date(periodStart);
     dateFrom.setHours(0, 0, 0, 0);
-    const dateTo = new Date(weekEnd);
+    const dateTo = new Date(periodEnd);
     dateTo.setHours(23, 59, 59, 999);
     const params = { dateFrom: dateFrom.toISOString(), dateTo: dateTo.toISOString() };
     Promise.all([
@@ -89,18 +132,20 @@ export function MyCalendarPage() {
       }));
       setItems([...fromBookings, ...fromEvents].sort((a, b) => a.start.getTime() - b.start.getTime()));
     }).finally(() => setLoading(false));
-  }, [currentDate]);
+  }, [currentDate, calendarRange]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const handlePrevWeek = () => {
-    setCurrentDate((d) => addDays(d, -7));
+    const step = calendarRange || 7;
+    setCurrentDate((d) => addDays(d, -step));
   };
 
   const handleNextWeek = () => {
-    setCurrentDate((d) => addDays(d, 7));
+    const step = calendarRange || 7;
+    setCurrentDate((d) => addDays(d, step));
   };
 
   const handleToday = () => {
@@ -184,9 +229,9 @@ export function MyCalendarPage() {
           </button>
         </div>
         <div className="calendar-week-label">
-          Неделя с{' '}
-          {weekDays[0].toLocaleDateString('ru', { day: '2-digit', month: 'short' })} по{' '}
-          {weekDays[6].toLocaleDateString('ru', { day: '2-digit', month: 'short', year: 'numeric' })}
+          {calendarView === 'week' && (calendarRange || 7) === 7 ? 'Неделя с ' : 'Период с '}
+          {days[0].toLocaleDateString('ru', { day: '2-digit', month: 'short' })} по{' '}
+          {days[days.length - 1].toLocaleDateString('ru', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
       </div>
 
@@ -262,7 +307,7 @@ export function MyCalendarPage() {
       )}
 
       <div className="calendar-grid">
-        {weekDays.map((day) => {
+        {days.map((day) => {
           const dayStart = new Date(day);
           dayStart.setHours(0, 0, 0, 0);
           const dayEnd = new Date(day);

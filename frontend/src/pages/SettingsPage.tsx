@@ -38,7 +38,9 @@ export function SettingsPage() {
     setPrefsSaving(true);
     try {
       const res = await userApi.patchPreferences(prefs);
-      setPrefs(res.data ?? prefs);
+      const next = res.data ?? prefs;
+      setPrefs(next);
+      window.dispatchEvent(new CustomEvent<UserPreferences | undefined>('user:preferencesChanged', { detail: next }));
       setPrefsSuccess(true);
     } catch (err: unknown) {
       setPrefsError(getApiErrorMessage(err, 'Не удалось сохранить настройки'));

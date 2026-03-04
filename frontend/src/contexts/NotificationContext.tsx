@@ -1,4 +1,6 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { userApi, type UserPreferences } from '../lib/api';
 
 type NotificationKind = 'success';
 
@@ -16,14 +18,56 @@ const NotificationContext = createContext<NotificationContextValue | undefined>(
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<Notification[]>([]);
+  const [inAppEnabled, setInAppEnabled] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      setInAppEnabled(true);
+      return;
+    }
+    let cancelled = false;
+    userApi
+      .getPreferences()
+      .then((res) => {
+        if (cancelled) return;
+        const prefs = res.data ?? {};
+        if (typeof prefs.notifyInApp === 'boolean') {
+          setInAppEnabled(prefs.notifyInApp);
+        } else {
+          setInAppEnabled(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setInAppEnabled(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<UserPreferences | undefined>;
+      const prefs = custom.detail;
+      if (prefs && typeof prefs.notifyInApp === 'boolean') {
+        setInAppEnabled(prefs.notifyInApp);
+      }
+    };
+    window.addEventListener('user:preferencesChanged', handler as EventListener);
+    return () => {
+      window.removeEventListener('user:preferencesChanged', handler as EventListener);
+    };
+  }, []);
 
   const notifySuccess = useCallback((message: string) => {
+    if (!inAppEnabled) return;
     const id = Date.now() + Math.random();
     setItems((prev) => [...prev, { id, kind: 'success', message }]);
     window.setTimeout(() => {
       setItems((prev) => prev.filter((n) => n.id !== id));
     }, 3000);
-  }, []);
+  }, [inAppEnabled]);
 
   return (
     <NotificationContext.Provider value={{ notifySuccess }}>
