@@ -23,6 +23,10 @@ export default tseslint.config(
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
+    files: ['vite.config.ts', 'vite.config.js', 'playwright.config.ts'],
+    languageOptions: { globals: { process: 'readonly' } },
+  },
+  {
     ignores: ['dist/**', 'node_modules/**', 'playwright-report/**', 'test-results/**', 'e2e/**'],
   }
 );
