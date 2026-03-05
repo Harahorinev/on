@@ -39,8 +39,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(null);
       setUser(null);
     };
+    const onLogin = () => {
+      const t = localStorage.getItem('token');
+      const u = localStorage.getItem('user');
+      if (t) setToken(t);
+      if (u) {
+        try {
+          setUser(JSON.parse(u) as User);
+        } catch {
+          setUser(null);
+        }
+      }
+    };
     window.addEventListener('auth:logout', onLogout);
-    return () => window.removeEventListener('auth:logout', onLogout);
+    window.addEventListener('auth:login', onLogin);
+    return () => {
+      window.removeEventListener('auth:logout', onLogout);
+      window.removeEventListener('auth:login', onLogin);
+    };
   }, []);
 
   const login = useCallback((newToken: string, newUser: User) => {

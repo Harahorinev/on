@@ -1,5 +1,6 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -14,6 +15,41 @@ import { MyCalendarPage } from './pages/MyCalendarPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SettingsPage } from './pages/SettingsPage';
 
+const useMicrofrontends = import.meta.env.VITE_USE_MF === 'true';
+
+const AuthApp = lazy(() => import('auth/AuthApp'));
+const UserApp = lazy(() => import('user/UserApp'));
+const CompanyApp = lazy(() => import('company/CompanyApp'));
+
+const RemoteFallback = () => <p className="loading-placeholder">Загрузка…</p>;
+
+function AuthRoutes() {
+  const { login } = useAuth();
+  return (
+    <Suspense fallback={<RemoteFallback />}>
+      <AuthApp onLogin={login} />
+    </Suspense>
+  );
+}
+
+function UserRoutes() {
+  const { user } = useAuth();
+  return (
+    <Suspense fallback={<RemoteFallback />}>
+      <UserApp user={user} />
+    </Suspense>
+  );
+}
+
+function CompanyRoutes() {
+  const { user } = useAuth();
+  return (
+    <Suspense fallback={<RemoteFallback />}>
+      <CompanyApp user={user} />
+    </Suspense>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -22,25 +58,37 @@ function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
+              <Route
+                path="/login"
+                element={useMicrofrontends ? <AuthRoutes /> : <LoginPage />}
+              />
+              <Route
+                path="/register"
+                element={useMicrofrontends ? <AuthRoutes /> : <RegisterPage />}
+              />
               <Route
                 path="/companies"
                 element={
                   <ProtectedRoute role="USER">
-                    <CompaniesPage />
+                    {useMicrofrontends ? <UserRoutes /> : <CompaniesPage />}
                   </ProtectedRoute>
                 }
               />
               <Route
                 path="/companies/:id/schedule"
-                element={<CompanySchedulePage />}
+                element={
+                  useMicrofrontends ? (
+                    <UserRoutes />
+                  ) : (
+                    <CompanySchedulePage />
+                  )
+                }
               />
               <Route
                 path="/bookings"
                 element={
                   <ProtectedRoute role="USER">
-                    <BookingsPage />
+                    {useMicrofrontends ? <UserRoutes /> : <BookingsPage />}
                   </ProtectedRoute>
                 }
               />
@@ -48,7 +96,7 @@ function App() {
                 path="/calendar"
                 element={
                   <ProtectedRoute role="USER">
-                    <MyCalendarPage />
+                    {useMicrofrontends ? <UserRoutes /> : <MyCalendarPage />}
                   </ProtectedRoute>
                 }
               />
@@ -56,7 +104,7 @@ function App() {
                 path="/company"
                 element={
                   <ProtectedRoute role="COMPANY">
-                    <CompanyPage />
+                    {useMicrofrontends ? <CompanyRoutes /> : <CompanyPage />}
                   </ProtectedRoute>
                 }
               />
@@ -64,7 +112,7 @@ function App() {
                 path="/settings"
                 element={
                   <ProtectedRoute>
-                    <SettingsPage />
+                    {useMicrofrontends ? <UserRoutes /> : <SettingsPage />}
                   </ProtectedRoute>
                 }
               />

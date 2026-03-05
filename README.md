@@ -8,7 +8,20 @@
 - **Фронт:** в папке `frontend`: `npm install`, `npm run dev`. Dev-сервер на порту 5173, запросы к `/api` проксируются на бэкенд **http://localhost:3001**.
 - Для продакшена URL API задаётся через `VITE_API_URL` при сборке фронта (в dev по умолчанию используется 3001).
 
-Деплой и окружение — см. [DEPLOY.md](DEPLOY.md) и [docs/deploy-cd.md](docs/deploy-cd.md).
+### Микрофронтенды (host + remotes)
+
+Фронт разбит на host (`frontend/`) и три remote-приложения: **auth** (логин/регистрация), **user** (компании, записи, календарь, настройки), **company** (кабинет компании). В dev для работы с remotes нужно собрать их и поднять preview: из корня проекта:
+
+```bash
+cd frontend-auth && npm install && npm run build && npm run preview &
+cd frontend-user && npm install && npm run build && npm run preview &
+cd frontend-company && npm install && npm run build && npm run preview &
+cd frontend && npm run dev
+```
+
+По умолчанию host рендерит локальные страницы (логин, компании и т.д.). Чтобы использовать микрофронтенды, задайте `VITE_USE_MF=true` и запустите remotes на портах 5174 (auth), 5175 (user), 5176 (company). В проде URL remotes задаются через `VITE_REMOTE_AUTH_URL`, `VITE_REMOTE_USER_URL`, `VITE_REMOTE_COMPANY_URL` (базовый URL до `/assets/remoteEntry.js`).
+
+## Деплой и окружение — см. [DEPLOY.md](DEPLOY.md) и [docs/deploy-cd.md](docs/deploy-cd.md).
 
 ## Структура проекта
 
