@@ -335,6 +335,11 @@ input, textarea, select {
   border-radius: var(--radius-md);
 }
 
+.muted {
+  color: var(--color-text-muted, #666);
+  font-size: var(--text-sm);
+}
+
 /* ==========================================================================
    Navigation
    ========================================================================== */

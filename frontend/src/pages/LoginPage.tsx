@@ -59,6 +59,9 @@ export function LoginPage() {
         </button>
       </form>
       <p className="mt-1">
+        <Link to="/forgot-password">Забыли пароль?</Link>
+      </p>
+      <p className="mt-1">
         Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
       </p>
     </div>

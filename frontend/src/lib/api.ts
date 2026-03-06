@@ -173,6 +173,12 @@ export const authApi = {
     api.post<{ accessToken: string; user: User }>('/auth/register', data),
   login: (data: { email: string; password: string }) =>
     api.post<{ accessToken: string; user: User }>('/auth/login', data),
+  /** F77: Request password reset. Backend always returns 200 with same message (security). */
+  forgotPassword: (data: { email: string }) =>
+    api.post<{ message: string }>('/auth/forgot-password', data),
+  /** F77: Set new password with token from reset link. */
+  resetPassword: (data: { token: string; newPassword: string }) =>
+    api.post<unknown>('/auth/reset-password', data),
 };
 
 export const companiesApi = {
