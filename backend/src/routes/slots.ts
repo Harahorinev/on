@@ -3,6 +3,7 @@ import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import { LIMITS, validateMaxLength } from "../validation.js";
 
 export const slotsRouter = Router({ mergeParams: true });
 
@@ -91,6 +92,21 @@ slotsRouter.post("/", authMiddleware, (req, res, next) => {
     next(new AppError(400, "startAt, endAt, capacity required"));
     return;
   }
+  const titleErr = validateMaxLength(title, LIMITS.TITLE_MAX, "title");
+  if (titleErr) {
+    next(new AppError(400, titleErr));
+    return;
+  }
+  const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+  if (descErr) {
+    next(new AppError(400, descErr));
+    return;
+  }
+  const locErr = validateMaxLength(location, LIMITS.LOCATION_MAX, "location");
+  if (locErr) {
+    next(new AppError(400, locErr));
+    return;
+  }
   const start = new Date(startAt);
   const end = new Date(endAt);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
@@ -162,6 +178,21 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
   }
   if (status !== undefined && status !== "OPEN" && status !== "CANCELLED" && status !== "CLOSED") {
     next(new AppError(400, "Invalid status"));
+    return;
+  }
+  const titleErr = validateMaxLength(title, LIMITS.TITLE_MAX, "title");
+  if (titleErr) {
+    next(new AppError(400, titleErr));
+    return;
+  }
+  const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+  if (descErr) {
+    next(new AppError(400, descErr));
+    return;
+  }
+  const locErr = validateMaxLength(location, LIMITS.LOCATION_MAX, "location");
+  if (locErr) {
+    next(new AppError(400, locErr));
     return;
   }
   const updates: string[] = [];

@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import { LIMITS, validateMaxLength } from "../validation.js";
 
 export const userEventsRouter = Router();
 
@@ -64,6 +65,16 @@ userEventsRouter.post("/", authMiddleware, (req: Request, res: Response, next: N
     next(new AppError(400, "title required"));
     return;
   }
+  const titleErr = validateMaxLength(title.trim(), LIMITS.TITLE_MAX, "title");
+  if (titleErr) {
+    next(new AppError(400, titleErr));
+    return;
+  }
+  const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+  if (descErr) {
+    next(new AppError(400, descErr));
+    return;
+  }
   if (!startAt || !endAt) {
     next(new AppError(400, "startAt and endAt required"));
     return;
@@ -115,10 +126,20 @@ userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response, nex
       next(new AppError(400, "title must be non-empty"));
       return;
     }
+    const titleErr = validateMaxLength(title.trim(), LIMITS.TITLE_MAX, "title");
+    if (titleErr) {
+      next(new AppError(400, titleErr));
+      return;
+    }
     updates.push("title = ?");
     values.push(title.trim());
   }
   if (description !== undefined) {
+    const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+    if (descErr) {
+      next(new AppError(400, descErr));
+      return;
+    }
     updates.push("description = ?");
     values.push(description?.trim() || null);
   }

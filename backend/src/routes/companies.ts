@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import { LIMITS, validateMaxLength } from "../validation.js";
 
 export const companiesRouter = Router();
 
@@ -96,8 +97,22 @@ companiesRouter.post("/", authMiddleware, (req, res, next) => {
     return;
   }
   const { name, description, timezone } = req.body ?? {};
-  if (!name) {
+  if (!name || typeof name !== "string" || !name.trim()) {
     next(new AppError(400, "name required"));
+    return;
+  }
+  const nameErr = validateMaxLength(name.trim(), LIMITS.COMPANY_NAME_MAX, "name");
+  if (nameErr) {
+    next(new AppError(400, nameErr));
+    return;
+  }
+  const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+  if (descErr) {
+    next(new AppError(400, descErr));
+    return;
+  }
+  if (timezone !== undefined && typeof timezone === "string" && timezone.length > LIMITS.TIMEZONE_MAX) {
+    next(new AppError(400, `timezone must be at most ${LIMITS.TIMEZONE_MAX} characters`));
     return;
   }
   const existing = db.prepare("SELECT id FROM companies WHERE owner_id = ?").get(req.userId!);
@@ -106,9 +121,10 @@ companiesRouter.post("/", authMiddleware, (req, res, next) => {
     return;
   }
   const id = uuid();
+  const nameTrimmed = name.trim();
   db.prepare(
     "INSERT INTO companies (id, name, description, timezone, owner_id) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, name, description ?? null, timezone ?? "UTC", req.userId!);
+  ).run(id, nameTrimmed, description ?? null, timezone ?? "UTC", req.userId!);
   const owner = db.prepare("SELECT id, email, name FROM users WHERE id = ?").get(req.userId!) as {
     id: string;
     email: string;
@@ -116,7 +132,7 @@ companiesRouter.post("/", authMiddleware, (req, res, next) => {
   };
   res.status(201).json({
     id,
-    name,
+    name: nameTrimmed,
     description: description ?? undefined,
     timezone: timezone ?? "UTC",
     owner: { id: owner.id, email: owner.email, name: owner.name },
@@ -139,14 +155,32 @@ companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
   const updates: string[] = [];
   const values: unknown[] = [];
   if (name !== undefined) {
+    if (typeof name !== "string" || !name.trim()) {
+      next(new AppError(400, "name must be non-empty"));
+      return;
+    }
+    const nameErr = validateMaxLength(name.trim(), LIMITS.COMPANY_NAME_MAX, "name");
+    if (nameErr) {
+      next(new AppError(400, nameErr));
+      return;
+    }
     updates.push("name = ?");
-    values.push(name);
+    values.push(name.trim());
   }
   if (description !== undefined) {
+    const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+    if (descErr) {
+      next(new AppError(400, descErr));
+      return;
+    }
     updates.push("description = ?");
     values.push(description);
   }
   if (timezone !== undefined) {
+    if (typeof timezone !== "string" || timezone.length > LIMITS.TIMEZONE_MAX) {
+      next(new AppError(400, `timezone must be at most ${LIMITS.TIMEZONE_MAX} characters`));
+      return;
+    }
     updates.push("timezone = ?");
     values.push(timezone);
   }

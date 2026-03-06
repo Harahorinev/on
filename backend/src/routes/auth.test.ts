@@ -49,6 +49,32 @@ describe("POST /auth/register", () => {
     expect(res.status).toBe(409);
     expect(res.body.message).toMatch(/already|registered/i);
   });
+
+  it("returns 400 when email format invalid", async () => {
+    const res = await request(app)
+      .post("/auth/register")
+      .send({ email: "not-an-email", password: "123456", name: "U", role: "USER" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/email|format/i);
+  });
+
+  it("returns 400 when name too long", async () => {
+    const longName = "x".repeat(257);
+    const res = await request(app)
+      .post("/auth/register")
+      .send({ email: "longname@test.co", password: "123456", name: longName, role: "USER" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/name|256|character/i);
+  });
+
+  it("returns 400 when password too long", async () => {
+    const longPassword = "a".repeat(73);
+    const res = await request(app)
+      .post("/auth/register")
+      .send({ email: "longpwd@test.co", password: longPassword, name: "U", role: "USER" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/password|72|character/i);
+  });
 });
 
 describe("POST /auth/login", () => {
@@ -60,6 +86,14 @@ describe("POST /auth/login", () => {
     const res = await request(app).post("/auth/login").send({ email: "a@b.co" });
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/required/);
+  });
+
+  it("returns 400 when email format invalid", async () => {
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ email: "bad-format", password: "secret" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/email|format/i);
   });
 
   it("returns 401 when password wrong", async () => {

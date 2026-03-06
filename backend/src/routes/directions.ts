@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import { LIMITS, validateMaxLength } from "../validation.js";
 
 export const directionsRouter = Router({ mergeParams: true });
 
@@ -74,6 +75,16 @@ directionsRouter.post("/", authMiddleware, (req, res, next) => {
     next(new AppError(400, "name required"));
     return;
   }
+  const nameErr = validateMaxLength(name.trim(), LIMITS.COMPANY_NAME_MAX, "name");
+  if (nameErr) {
+    next(new AppError(400, nameErr));
+    return;
+  }
+  const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+  if (descErr) {
+    next(new AppError(400, descErr));
+    return;
+  }
   const id = uuid();
   const sort = typeof sortOrder === "number" ? sortOrder : 0;
   db.prepare(
@@ -111,10 +122,20 @@ directionsRouter.patch("/:directionId", authMiddleware, (req, res, next) => {
       next(new AppError(400, "name must be non-empty"));
       return;
     }
+    const nameErr = validateMaxLength(name.trim(), LIMITS.COMPANY_NAME_MAX, "name");
+    if (nameErr) {
+      next(new AppError(400, nameErr));
+      return;
+    }
     updates.push("name = ?");
     values.push(name.trim());
   }
   if (description !== undefined) {
+    const descErr = validateMaxLength(description, LIMITS.DESCRIPTION_MAX, "description");
+    if (descErr) {
+      next(new AppError(400, descErr));
+      return;
+    }
     updates.push("description = ?");
     values.push(description?.trim() || null);
   }

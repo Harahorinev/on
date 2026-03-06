@@ -3,6 +3,7 @@ import { db } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { findUserById, updatePassword, verifyPassword } from "../auth.js";
 import { AppError } from "../errors.js";
+import { validatePasswordLength } from "../validation.js";
 
 export const userRouter = Router();
 
@@ -81,8 +82,9 @@ userRouter.patch("/password", (req: Request, res: Response, next: (err: unknown)
     next(new AppError(400, "currentPassword and newPassword required"));
     return;
   }
-  if (newPassword.length < 6) {
-    next(new AppError(400, "newPassword at least 6 characters"));
+  const pwdErr = validatePasswordLength(newPassword);
+  if (pwdErr) {
+    next(new AppError(400, pwdErr));
     return;
   }
   const row = findUserById(userId);

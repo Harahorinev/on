@@ -91,6 +91,16 @@ describe("POST /companies", () => {
     expect(res.body.message).toMatch(/name/);
   });
 
+  it("returns 400 when name too long", async () => {
+    const longName = "x".repeat(501);
+    const res = await request(app)
+      .post("/companies")
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ name: longName });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/name|500|character/i);
+  });
+
   it("returns 201 and company when valid", async () => {
     const res = await request(app)
       .post("/companies")

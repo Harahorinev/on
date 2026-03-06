@@ -7,6 +7,7 @@ import {
   verifyPassword,
 } from "../auth.js";
 import { AppError } from "../errors.js";
+import { LIMITS, isValidEmail, validateMaxLength, validatePasswordLength } from "../validation.js";
 
 export const authRouter = Router();
 
@@ -16,12 +17,22 @@ authRouter.post("/register", (req, res, next) => {
     next(new AppError(400, "email, password, name, role required"));
     return;
   }
+  if (!isValidEmail(email)) {
+    next(new AppError(400, "Invalid email format"));
+    return;
+  }
   if (!["USER", "COMPANY"].includes(role)) {
     next(new AppError(400, "role must be USER or COMPANY"));
     return;
   }
-  if (password.length < 6) {
-    next(new AppError(400, "password at least 6 characters"));
+  const pwdErr = validatePasswordLength(password);
+  if (pwdErr) {
+    next(new AppError(400, pwdErr));
+    return;
+  }
+  const nameErr = validateMaxLength(name, LIMITS.USER_NAME_MAX, "name");
+  if (nameErr) {
+    next(new AppError(400, nameErr));
     return;
   }
   if (findUserByEmail(email)) {
@@ -51,6 +62,10 @@ authRouter.post("/login", (req, res, next) => {
   const { email, password } = req.body ?? {};
   if (!email || !password) {
     next(new AppError(400, "email and password required"));
+    return;
+  }
+  if (!isValidEmail(email)) {
+    next(new AppError(400, "Invalid email format"));
     return;
   }
   const row = findUserByEmail(email);
