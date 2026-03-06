@@ -9,15 +9,17 @@ const getRemoteUrl = (envKey: string, port: number) => {
   return `http://localhost:${port}/assets/remoteEntry.js`
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => {
+  const useLocalhost = command === 'serve'
+  return {
   plugins: [
     react(),
     federation({
       name: 'host',
       remotes: {
-        auth: getRemoteUrl('VITE_REMOTE_AUTH_URL', 5174),
-        user: getRemoteUrl('VITE_REMOTE_USER_URL', 5175),
-        company: getRemoteUrl('VITE_REMOTE_COMPANY_URL', 5176),
+        auth: useLocalhost ? 'http://localhost:5174/assets/remoteEntry.js' : getRemoteUrl('VITE_REMOTE_AUTH_URL', 5174),
+        user: useLocalhost ? 'http://localhost:5175/assets/remoteEntry.js' : getRemoteUrl('VITE_REMOTE_USER_URL', 5175),
+        company: useLocalhost ? 'http://localhost:5176/assets/remoteEntry.js' : getRemoteUrl('VITE_REMOTE_COMPANY_URL', 5176),
       },
       shared: ['react', 'react-dom', 'react-router-dom'],
     }),
@@ -40,4 +42,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

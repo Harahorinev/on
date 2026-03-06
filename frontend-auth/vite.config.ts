@@ -16,6 +16,7 @@ export default defineConfig({
   ],
   server: {
     port: 5174,
+    cors: true,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
@@ -24,6 +25,7 @@ export default defineConfig({
       },
     },
   },
+  preview: { port: 5174, cors: true },
   build: {
     target: 'esnext',
     minify: false,

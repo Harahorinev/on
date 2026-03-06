@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
@@ -15,9 +15,30 @@ import { SettingsPage } from './pages/SettingsPage';
 
 const USE_MF = import.meta.env.VITE_USE_MF === 'true';
 
-const AuthApp = lazy(() => import('auth/AuthApp'));
-const UserApp = lazy(() => import('user/UserApp'));
-const CompanyApp = lazy(() => import('company/CompanyApp'));
+function AuthLocalFallback() {
+  const { pathname } = useLocation();
+  return pathname === '/register' ? <RegisterPage /> : <LoginPage />;
+}
+
+function UserLocalFallback() {
+  const { pathname } = useLocation();
+  if (pathname === '/companies') return <CompaniesPage />;
+  if (pathname.startsWith('/companies/') && pathname.endsWith('/schedule')) return <CompanySchedulePage />;
+  if (pathname === '/bookings') return <BookingsPage />;
+  if (pathname === '/calendar') return <MyCalendarPage />;
+  if (pathname === '/settings') return <SettingsPage />;
+  return <CompaniesPage />;
+}
+
+const AuthApp = lazy(() =>
+  import('auth/AuthApp').catch(() => ({ default: AuthLocalFallback }))
+);
+const UserApp = lazy(() =>
+  import('user/UserApp').catch(() => ({ default: UserLocalFallback }))
+);
+const CompanyApp = lazy(() =>
+  import('company/CompanyApp').catch(() => ({ default: CompanyPage }))
+);
 
 const RemoteFallback = () => <p className="loading-placeholder">Загрузка…</p>;
 
