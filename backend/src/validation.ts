@@ -1,7 +1,10 @@
 /**
  * Shared validation helpers and limits for request body fields.
  * B90: email format and max lengths for names, passwords, text fields.
+ * B64: validation messages in Russian.
  */
+
+import { validation as v } from "./messages.js";
 
 export const LIMITS = {
   USER_NAME_MAX: 256,
@@ -13,6 +16,19 @@ export const LIMITS = {
   LOCATION_MAX: 500,
   TIMEZONE_MAX: 64,
 } as const;
+
+/** Human-readable field names for validation messages. */
+const FIELD_NAMES: Record<string, string> = {
+  name: "Имя",
+  description: "Описание",
+  title: "Название",
+  location: "Место",
+  timezone: "Часовой пояс",
+};
+
+function fieldLabel(fieldName: string): string {
+  return FIELD_NAMES[fieldName] ?? fieldName;
+}
 
 /** Simple email format: local@domain with at least one dot in domain. */
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,16 +45,16 @@ export function validateMaxLength(
   fieldName: string
 ): string | null {
   if (value === undefined || value === null) return null;
-  if (typeof value !== "string") return `${fieldName} must be a string`;
-  if (value.length > max) return `${fieldName} must be at most ${max} characters`;
+  if (typeof value !== "string") return v.fieldMustBeString(fieldLabel(fieldName));
+  if (value.length > max) return v.fieldMaxLength(fieldLabel(fieldName), max);
   return null;
 }
 
 export function validatePasswordLength(password: unknown): string | null {
-  if (typeof password !== "string") return "password must be a string";
+  if (typeof password !== "string") return v.passwordMustBeString;
   if (password.length < LIMITS.PASSWORD_MIN)
-    return `password must be at least ${LIMITS.PASSWORD_MIN} characters`;
+    return v.passwordMin(LIMITS.PASSWORD_MIN);
   if (password.length > LIMITS.PASSWORD_MAX)
-    return `password must be at most ${LIMITS.PASSWORD_MAX} characters`;
+    return v.passwordMax(LIMITS.PASSWORD_MAX);
   return null;
 }

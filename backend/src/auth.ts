@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { db, uuid } from "./db.js";
 import { AppError } from "./errors.js";
 import { logger } from "./logger.js";
+import { msg } from "./messages.js";
 
 const DEV_JWT_SECRET = "dev-secret-change-in-production";
 const JWT_SECRET = process.env.JWT_SECRET ?? DEV_JWT_SECRET;
@@ -122,17 +123,17 @@ export function authMiddleware(
   const auth = req.headers.authorization;
   const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
   if (!token) {
-    next(new AppError(401, "Unauthorized"));
+    next(new AppError(401, msg.auth_unauthorized));
     return;
   }
   const payload = verifyToken(token);
   if (!payload) {
-    next(new AppError(401, "Invalid or expired token"));
+    next(new AppError(401, msg.auth_invalidOrExpiredToken));
     return;
   }
   const row = findUserById(payload.sub);
   if (!row) {
-    next(new AppError(401, "User not found"));
+    next(new AppError(401, msg.auth_userNotFound));
     return;
   }
   req.user = rowToUser(row);

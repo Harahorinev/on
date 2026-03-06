@@ -3,6 +3,7 @@ import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import { msg } from "../messages.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
 import type { SlotRow, SlotRowWithCompany } from "../db-types.js";
 
@@ -30,7 +31,7 @@ export function getSlotById(req: express.Request, res: express.Response, next: e
     )
     .get(req.params.id) as SlotRowWithCompany | undefined;
   if (!row) {
-    next(new AppError(404, "Slot not found"));
+    next(new AppError(404, msg.slot_notFound));
     return;
   }
   res.json(slotToJson(row, { id: row.cid, name: row.cname }));
@@ -39,7 +40,7 @@ export function getSlotById(req: express.Request, res: express.Response, next: e
 slotsRouter.get("/", (req, res, next) => {
   const companyId = (req.params as { companyId?: string }).companyId;
   if (!companyId) {
-    next(new AppError(400, "companyId required"));
+    next(new AppError(400, msg.slot_companyIdRequired));
     return;
   }
   const { dateFrom, dateTo } = req.query as { dateFrom?: string; dateTo?: string };
@@ -69,7 +70,7 @@ slotsRouter.get("/:slotId", (req, res, next) => {
     )
     .get(req.params.slotId) as SlotRowWithCompany | undefined;
   if (!row) {
-    next(new AppError(404, "Slot not found"));
+    next(new AppError(404, msg.slot_notFound));
     return;
   }
   res.json(slotToJson(row, { id: row.cid, name: row.cname }));
@@ -81,16 +82,16 @@ slotsRouter.post("/", authMiddleware, (req, res, next) => {
     | { id: string; owner_id: string }
     | undefined;
   if (!company) {
-    next(new AppError(404, "Company not found"));
+    next(new AppError(404, msg.company_notFound));
     return;
   }
   if (company.owner_id !== req.userId) {
-    next(new AppError(403, "Forbidden"));
+    next(new AppError(403, msg.forbidden));
     return;
   }
   const { startAt, endAt, capacity, title, description, location } = req.body ?? {};
   if (!startAt || !endAt || capacity == null) {
-    next(new AppError(400, "startAt, endAt, capacity required"));
+    next(new AppError(400, msg.slot_startEndCapacityRequired));
     return;
   }
   const titleErr = validateMaxLength(title, LIMITS.TITLE_MAX, "title");
@@ -111,16 +112,16 @@ slotsRouter.post("/", authMiddleware, (req, res, next) => {
   const start = new Date(startAt);
   const end = new Date(endAt);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    next(new AppError(400, "Invalid startAt or endAt"));
+    next(new AppError(400, msg.slot_invalidStartOrEnd));
     return;
   }
   if (end <= start) {
-    next(new AppError(400, "endAt must be after startAt"));
+    next(new AppError(400, msg.slot_endAfterStart));
     return;
   }
   const now = new Date();
   if (start < now) {
-    next(new AppError(400, "startAt cannot be in the past"));
+    next(new AppError(400, msg.slot_startNotInPast));
     return;
   }
   const id = uuid();
@@ -151,12 +152,12 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
     | { owner_id: string }
     | undefined;
   if (!company || company.owner_id !== req.userId) {
-    next(new AppError(403, "Forbidden"));
+    next(new AppError(403, msg.forbidden));
     return;
   }
   const slot = db.prepare("SELECT * FROM slots WHERE id = ? AND company_id = ?").get(slotId, companyId) as SlotRow | undefined;
   if (!slot) {
-    next(new AppError(404, "Slot not found"));
+    next(new AppError(404, msg.slot_notFound));
     return;
   }
   const { startAt, endAt, capacity, status, title, description, location } = req.body ?? {};
@@ -164,21 +165,21 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
     const newStart = new Date(startAt ?? slot.start_at);
     const newEnd = new Date(endAt ?? slot.end_at);
     if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) {
-      next(new AppError(400, "Invalid startAt or endAt"));
+      next(new AppError(400, msg.slot_invalidStartOrEnd));
       return;
     }
     if (newEnd <= newStart) {
-      next(new AppError(400, "endAt must be after startAt"));
+      next(new AppError(400, msg.slot_endAfterStart));
       return;
     }
     const now = new Date();
     if (newStart < now) {
-      next(new AppError(400, "startAt cannot be in the past"));
+      next(new AppError(400, msg.slot_startNotInPast));
       return;
     }
   }
   if (status !== undefined && status !== "OPEN" && status !== "CANCELLED" && status !== "CLOSED") {
-    next(new AppError(400, "Invalid status"));
+    next(new AppError(400, msg.slot_invalidStatus));
     return;
   }
   const titleErr = validateMaxLength(title, LIMITS.TITLE_MAX, "title");
@@ -234,7 +235,7 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
     .prepare("SELECT s.*, c.id as cid, c.name as cname FROM slots s JOIN companies c ON s.company_id = c.id WHERE s.id = ?")
     .get(slotId) as SlotRowWithCompany | undefined;
   if (!row) {
-    next(new AppError(404, "Slot not found"));
+    next(new AppError(404, msg.slot_notFound));
     return;
   }
   res.json(slotToJson(row, { id: row.cid, name: row.cname }));
@@ -247,12 +248,12 @@ slotsRouter.delete("/:slotId", authMiddleware, (req, res, next) => {
     | { owner_id: string }
     | undefined;
   if (!company || company.owner_id !== req.userId) {
-    next(new AppError(403, "Forbidden"));
+    next(new AppError(403, msg.forbidden));
     return;
   }
   const r = db.prepare("DELETE FROM slots WHERE id = ? AND company_id = ?").run(slotId, companyId);
   if (r.changes === 0) {
-    next(new AppError(404, "Slot not found"));
+    next(new AppError(404, msg.slot_notFound));
     return;
   }
   res.status(204).send();

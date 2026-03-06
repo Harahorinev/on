@@ -4,6 +4,7 @@ import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
 import type { BookingJoinedRow, BookingRow, SlotRow } from "../db-types.js";
+import { msg } from "../messages.js";
 
 export const bookingsRouter = Router();
 
@@ -83,11 +84,11 @@ bookingsRouter.get("/:id", authMiddleware, (req, res, next) => {
     )
     .get(req.params.id) as BookingJoinedRow | undefined;
   if (!row) {
-    next(new AppError(404, "Booking not found"));
+    next(new AppError(404, msg.booking_notFound));
     return;
   }
   if (row.user_id !== req.userId) {
-    next(new AppError(403, "Forbidden"));
+    next(new AppError(403, msg.forbidden));
     return;
   }
   res.json(
@@ -109,28 +110,28 @@ bookingsRouter.get("/:id", authMiddleware, (req, res, next) => {
 export function createBookingForSlot(req: express.Request, res: express.Response, next: express.NextFunction) {
   const slotId = req.params.slotId;
   if (req.userRole !== "USER") {
-    next(new AppError(403, "Only USER can create bookings"));
+    next(new AppError(403, msg.booking_onlyUserCanCreate));
     return;
   }
   const slot = db.prepare("SELECT * FROM slots WHERE id = ?").get(slotId) as SlotRow | undefined;
   if (!slot) {
-    next(new AppError(404, "Slot not found"));
+    next(new AppError(404, msg.slot_notFound));
     return;
   }
   if (slot.status !== "OPEN") {
-    next(new AppError(400, "Slot is not available"));
+    next(new AppError(400, msg.slot_notAvailable));
     return;
   }
   const existing = db
     .prepare("SELECT id, status FROM bookings WHERE slot_id = ? AND user_id = ?")
     .get(slotId, req.userId!) as { id: string; status: string } | undefined;
   if (existing?.status === "CONFIRMED") {
-    next(new AppError(409, "Already booked"));
+    next(new AppError(409, msg.booking_alreadyBooked));
     return;
   }
   const count = db.prepare("SELECT COUNT(*) as n FROM bookings WHERE slot_id = ? AND status = 'CONFIRMED'").get(slotId) as { n: number };
   if (count.n >= slot.capacity) {
-    next(new AppError(400, "Slot is full"));
+    next(new AppError(400, msg.slot_full));
     return;
   }
   let bookingId: string;
@@ -154,11 +155,11 @@ export function createBookingForSlot(req: express.Request, res: express.Response
 bookingsRouter.delete("/:id", authMiddleware, (req, res, next) => {
   const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as BookingRow | undefined;
   if (!row) {
-    next(new AppError(404, "Booking not found"));
+    next(new AppError(404, msg.booking_notFound));
     return;
   }
   if (row.user_id !== req.userId) {
-    next(new AppError(403, "Forbidden"));
+    next(new AppError(403, msg.forbidden));
     return;
   }
   db.prepare("UPDATE bookings SET status = 'CANCELLED' WHERE id = ?").run(req.params.id);

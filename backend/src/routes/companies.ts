@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import { msg } from "../messages.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
 import type { CompanyRowWithOwner } from "../db-types.js";
 
@@ -46,7 +47,7 @@ companiesRouter.get("/me", authMiddleware, (req, res, next) => {
     | { id: string; name: string; description: string | null; timezone: string; owner_id: string }
     | undefined;
   if (!row) {
-    next(new AppError(404, "Company not found"));
+    next(new AppError(404, msg.company_notFound));
     return;
   }
   const owner = db.prepare("SELECT id, email, name FROM users WHERE id = ?").get(row.owner_id) as {
@@ -80,7 +81,7 @@ companiesRouter.get("/:id", (req, res, next) => {
       }
     | undefined;
   if (!row) {
-    next(new AppError(404, "Company not found"));
+    next(new AppError(404, msg.company_notFound));
     return;
   }
   res.json({
@@ -94,12 +95,12 @@ companiesRouter.get("/:id", (req, res, next) => {
 
 companiesRouter.post("/", authMiddleware, (req, res, next) => {
   if (req.userRole !== "COMPANY") {
-    next(new AppError(403, "Only COMPANY can create a company"));
+    next(new AppError(403, msg.company_onlyCompanyCanCreate));
     return;
   }
   const { name, description, timezone } = req.body ?? {};
   if (!name || typeof name !== "string" || !name.trim()) {
-    next(new AppError(400, "name required"));
+    next(new AppError(400, msg.company_nameRequired));
     return;
   }
   const nameErr = validateMaxLength(name.trim(), LIMITS.COMPANY_NAME_MAX, "name");
@@ -113,12 +114,12 @@ companiesRouter.post("/", authMiddleware, (req, res, next) => {
     return;
   }
   if (timezone !== undefined && typeof timezone === "string" && timezone.length > LIMITS.TIMEZONE_MAX) {
-    next(new AppError(400, `timezone must be at most ${LIMITS.TIMEZONE_MAX} characters`));
+    next(new AppError(400, msg.company_timezoneMax(LIMITS.TIMEZONE_MAX)));
     return;
   }
   const existing = db.prepare("SELECT id FROM companies WHERE owner_id = ?").get(req.userId!);
   if (existing) {
-    next(new AppError(400, "You already have a company"));
+    next(new AppError(400, msg.company_alreadyHaveCompany));
     return;
   }
   const id = uuid();
@@ -145,11 +146,11 @@ companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
     .prepare("SELECT id, owner_id FROM companies WHERE id = ?")
     .get(req.params.id) as { id: string; owner_id: string } | undefined;
   if (!company) {
-    next(new AppError(404, "Company not found"));
+    next(new AppError(404, msg.company_notFound));
     return;
   }
   if (company.owner_id !== req.userId) {
-    next(new AppError(403, "Forbidden"));
+    next(new AppError(403, msg.forbidden));
     return;
   }
   const { name, description, timezone } = req.body ?? {};
@@ -157,7 +158,7 @@ companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
   const values: unknown[] = [];
   if (name !== undefined) {
     if (typeof name !== "string" || !name.trim()) {
-      next(new AppError(400, "name must be non-empty"));
+      next(new AppError(400, msg.company_nameNonEmpty));
       return;
     }
     const nameErr = validateMaxLength(name.trim(), LIMITS.COMPANY_NAME_MAX, "name");
@@ -179,7 +180,7 @@ companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
   }
   if (timezone !== undefined) {
     if (typeof timezone !== "string" || timezone.length > LIMITS.TIMEZONE_MAX) {
-      next(new AppError(400, `timezone must be at most ${LIMITS.TIMEZONE_MAX} characters`));
+      next(new AppError(400, msg.company_timezoneMax(LIMITS.TIMEZONE_MAX)));
       return;
     }
     updates.push("timezone = ?");
@@ -192,7 +193,7 @@ companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
       )
       .get(req.params.id) as CompanyRowWithOwner | undefined;
     if (!row) {
-      next(new AppError(404, "Company not found"));
+      next(new AppError(404, msg.company_notFound));
       return;
     }
     return res.json({

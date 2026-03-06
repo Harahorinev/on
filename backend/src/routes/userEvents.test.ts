@@ -22,7 +22,7 @@ describe("GET /user/events", () => {
       .get("/user/events")
       .set("Authorization", `Bearer ${companyToken}`);
     expect(res.status).toBe(403);
-    expect(res.body.message).toMatch(/USER/);
+    expect(res.body.message).toMatch(/USER|рол|события/);
   });
 
   it("returns 200 and empty array when no events", async () => {
@@ -67,7 +67,7 @@ describe("POST /user/events", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .send({ startAt: start, endAt: end });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/title/);
+    expect(res.body.message).toMatch(/название|Укажите/);
   });
 
   it("returns 400 when startAt or endAt missing", async () => {
@@ -76,7 +76,7 @@ describe("POST /user/events", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .send({ title: "E" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/startAt|endAt/);
+    expect(res.body.message).toMatch(/начало|конец|Укажите/);
   });
 
   it("returns 400 when endAt not after startAt", async () => {
@@ -85,7 +85,7 @@ describe("POST /user/events", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .send({ title: "E", startAt: end, endAt: start });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/after/);
+    expect(res.body.message).toMatch(/позже|окончания|начала/);
   });
 
   it("returns 201 and event when valid", async () => {
@@ -127,7 +127,7 @@ describe("GET /user/events/:id", () => {
       .get("/user/events/unknown-event-id")
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/not found/i);
+    expect(res.body.message).toMatch(/Событие|найдено|Не найдено/);
   });
 
   it("returns 403 when other user's event", async () => {
@@ -178,7 +178,7 @@ describe("PATCH and DELETE /user/events/:id", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .send({ title: "   " });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/non-empty/);
+    expect(res.body.message).toMatch(/пуст|название/);
   });
 
   it("PATCH returns 200 and updates", async () => {

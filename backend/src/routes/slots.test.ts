@@ -7,7 +7,7 @@ describe("GET /slots/:id (public)", () => {
   it("returns 404 for unknown slot id", async () => {
     const res = await request(app).get("/slots/unknown-slot-id");
     expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/not found/i);
+    expect(res.body.message).toMatch(/Слот|найден|Не найдено/);
   });
 });
 
@@ -80,7 +80,7 @@ describe("POST /companies/:companyId/slots", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ startAt: futureStart });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/required/);
+    expect(res.body.message).toMatch(/Укажите|начало|конец|вместимость/);
   });
 
   it("returns 400 when endAt not after startAt", async () => {
@@ -89,7 +89,7 @@ describe("POST /companies/:companyId/slots", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ startAt: futureEnd, endAt: futureStart, capacity: 1 });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/after/);
+    expect(res.body.message).toMatch(/позже|окончания|начала/);
   });
 
   it("returns 201 and slot when valid", async () => {

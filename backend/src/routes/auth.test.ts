@@ -11,7 +11,7 @@ describe("POST /auth/register", () => {
   it("returns 400 when body fields missing", async () => {
     const res = await request(app).post("/auth/register").send({ email: "a@b.co" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/required/);
+    expect(res.body.message).toMatch(/Укажите|обязательн/);
   });
 
   it("returns 400 when role invalid", async () => {
@@ -19,7 +19,7 @@ describe("POST /auth/register", () => {
       .post("/auth/register")
       .send({ email: "r1@test.co", password: "123456", name: "U", role: "ADMIN" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/USER or COMPANY/);
+    expect(res.body.message).toMatch(/USER|COMPANY|рол/);
   });
 
   it("returns 400 when password too short", async () => {
@@ -27,7 +27,7 @@ describe("POST /auth/register", () => {
       .post("/auth/register")
       .send({ email: "r2@test.co", password: "12345", name: "U", role: "USER" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/6/);
+    expect(res.body.message).toMatch(/6|символ|Пароль/);
   });
 
   it("returns 201 and token when valid USER", async () => {
@@ -47,7 +47,7 @@ describe("POST /auth/register", () => {
       .post("/auth/register")
       .send({ email: "dup@test.co", password: "other12", name: "Dup2", role: "USER" });
     expect(res.status).toBe(409);
-    expect(res.body.message).toMatch(/already|registered/i);
+    expect(res.body.message).toMatch(/уже|зарегистрирован|Email/);
   });
 
   it("returns 400 when email format invalid", async () => {
@@ -55,7 +55,7 @@ describe("POST /auth/register", () => {
       .post("/auth/register")
       .send({ email: "not-an-email", password: "123456", name: "U", role: "USER" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/email|format/i);
+    expect(res.body.message).toMatch(/формат|email|Неверн/);
   });
 
   it("returns 400 when name too long", async () => {
@@ -64,7 +64,7 @@ describe("POST /auth/register", () => {
       .post("/auth/register")
       .send({ email: "longname@test.co", password: "123456", name: longName, role: "USER" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/name|256|character/i);
+    expect(res.body.message).toMatch(/256|символ|Имя/);
   });
 
   it("returns 400 when password too long", async () => {
@@ -73,7 +73,7 @@ describe("POST /auth/register", () => {
       .post("/auth/register")
       .send({ email: "longpwd@test.co", password: longPassword, name: "U", role: "USER" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/password|72|character/i);
+    expect(res.body.message).toMatch(/72|символ|Пароль/);
   });
 });
 
@@ -85,7 +85,7 @@ describe("POST /auth/login", () => {
   it("returns 400 when email or password missing", async () => {
     const res = await request(app).post("/auth/login").send({ email: "a@b.co" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/required/);
+    expect(res.body.message).toMatch(/Укажите|email|пароль/);
   });
 
   it("returns 400 when email format invalid", async () => {
@@ -93,7 +93,7 @@ describe("POST /auth/login", () => {
       .post("/auth/login")
       .send({ email: "bad-format", password: "secret" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/email|format/i);
+    expect(res.body.message).toMatch(/формат|email|Неверн/);
   });
 
   it("returns 401 when password wrong", async () => {
@@ -101,7 +101,7 @@ describe("POST /auth/login", () => {
       .post("/auth/login")
       .send({ email: "login-ok@test.co", password: "wrong" });
     expect(res.status).toBe(401);
-    expect(res.body.message).toMatch(/invalid|password/i);
+    expect(res.body.message).toMatch(/Неверн|email|пароль/);
   });
 
   it("returns 401 when email unknown", async () => {
@@ -131,7 +131,7 @@ describe("auth rate limiting", () => {
         windowMs: 60_000,
         max: 2,
         skip: () => false,
-        message: { message: "Too many auth attempts, please try again later." },
+        message: { message: "Слишком много попыток входа. Попробуйте позже." },
       }),
       authRouter
     );
@@ -141,6 +141,6 @@ describe("auth rate limiting", () => {
     await request(limitedApp).post("/auth/login").send({ email: "a@b.co", password: "y" });
     const res = await request(limitedApp).post("/auth/login").send({ email: "a@b.co", password: "z" });
     expect(res.status).toBe(429);
-    expect(res.body.message).toMatch(/too many|try again later/i);
+    expect(res.body.message).toMatch(/Слишком|много|Попробуйте|позже/);
   });
 });

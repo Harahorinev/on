@@ -3,6 +3,7 @@ import { db } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { findUserById, updatePassword, verifyPassword } from "../auth.js";
 import { AppError } from "../errors.js";
+import { msg } from "../messages.js";
 import { validatePasswordLength } from "../validation.js";
 
 export const userRouter = Router();
@@ -30,21 +31,21 @@ userRouter.patch("/preferences", (req: Request, res: Response, next: (err: unkno
 
   if (body.notifyEmail !== undefined) {
     if (typeof body.notifyEmail !== "boolean") {
-      next(new AppError(400, "notifyEmail must be boolean"));
+      next(new AppError(400, msg.user_notifyEmailBoolean));
       return;
     }
     updates.notifyEmail = body.notifyEmail;
   }
   if (body.notifyInApp !== undefined) {
     if (typeof body.notifyInApp !== "boolean") {
-      next(new AppError(400, "notifyInApp must be boolean"));
+      next(new AppError(400, msg.user_notifyInAppBoolean));
       return;
     }
     updates.notifyInApp = body.notifyInApp;
   }
   if (body.calendarView !== undefined) {
     if (!CALENDAR_VIEW_VALUES.includes(body.calendarView as (typeof CALENDAR_VIEW_VALUES)[number])) {
-      next(new AppError(400, "calendarView must be week or month"));
+      next(new AppError(400, msg.user_calendarViewWeekOrMonth));
       return;
     }
     updates.calendarView = body.calendarView;
@@ -52,7 +53,7 @@ userRouter.patch("/preferences", (req: Request, res: Response, next: (err: unkno
   if (body.calendarRange !== undefined) {
     const n = Number(body.calendarRange);
     if (!Number.isInteger(n) || !CALENDAR_RANGE_VALUES.includes(n as (typeof CALENDAR_RANGE_VALUES)[number])) {
-      next(new AppError(400, "calendarRange must be 7, 14, or 30"));
+      next(new AppError(400, msg.user_calendarRangeValues));
       return;
     }
     updates.calendarRange = n as (typeof CALENDAR_RANGE_VALUES)[number];
@@ -79,7 +80,7 @@ userRouter.patch("/password", (req: Request, res: Response, next: (err: unknown)
   const userId = req.userId!;
   const { currentPassword, newPassword } = (req.body ?? {}) as { currentPassword?: string; newPassword?: string };
   if (!currentPassword || !newPassword) {
-    next(new AppError(400, "currentPassword and newPassword required"));
+    next(new AppError(400, msg.user_currentAndNewPasswordRequired));
     return;
   }
   const pwdErr = validatePasswordLength(newPassword);
@@ -89,11 +90,11 @@ userRouter.patch("/password", (req: Request, res: Response, next: (err: unknown)
   }
   const row = findUserById(userId);
   if (!row) {
-    next(new AppError(401, "User not found"));
+    next(new AppError(401, msg.auth_userNotFound));
     return;
   }
   if (!verifyPassword(currentPassword, row.password_hash)) {
-    next(new AppError(400, "Current password is incorrect"));
+    next(new AppError(400, msg.user_currentPasswordIncorrect));
     return;
   }
   updatePassword(userId, newPassword);

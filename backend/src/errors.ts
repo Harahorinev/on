@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "./logger.js";
+import { msg } from "./messages.js";
 
 /**
  * Application error with HTTP status. Use in routes: next(new AppError(404, "Not found")).
@@ -37,10 +38,10 @@ export function errorHandler(
     return;
   }
   logger.error({ err }, "Unhandled error");
-  sendError(res, 500, "Internal server error");
+  sendError(res, 500, msg.internalError);
 }
 
 /** Catch-all: no route matched → 404. Place before errorHandler. */
 export function notFoundHandler(_req: Request, _res: Response, next: NextFunction): void {
-  next(new AppError(404, "Not found"));
+  next(new AppError(404, msg.notFound));
 }

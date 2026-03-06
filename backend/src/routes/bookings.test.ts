@@ -59,7 +59,7 @@ describe("POST /slots/:slotId/bookings", () => {
       .post(`/slots/${slotId}/bookings`)
       .set("Authorization", `Bearer ${companyToken}`);
     expect(res.status).toBe(403);
-    expect(res.body.message).toMatch(/USER/);
+    expect(res.body.message).toMatch(/USER|рол|бронирован/);
   });
 
   it("returns 404 for unknown slot", async () => {
@@ -67,7 +67,7 @@ describe("POST /slots/:slotId/bookings", () => {
       .post("/slots/unknown-slot-id/bookings")
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/Slot not found/i);
+    expect(res.body.message).toMatch(/Слот|найден/);
   });
 
   it("returns 201 and booking when valid", async () => {
@@ -86,7 +86,7 @@ describe("POST /slots/:slotId/bookings", () => {
       .post(`/slots/${slotId}/bookings`)
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(409);
-    expect(res.body.message).toMatch(/already|booked/i);
+    expect(res.body.message).toMatch(/уже|забронировал/);
   });
 });
 

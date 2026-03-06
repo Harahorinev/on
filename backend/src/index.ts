@@ -6,6 +6,7 @@ import "./db.js";
 import { authMiddleware } from "./auth.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
 import { logger } from "./logger.js";
+import { msg } from "./messages.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
 import { companiesRouter } from "./routes/companies.js";
@@ -35,7 +36,7 @@ app.get("/health", (_req, res) => {
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: { message: "Too many auth attempts, please try again later." },
+  message: { message: msg.auth_tooManyAttempts },
   standardHeaders: true,
   skip: () => process.env.NODE_ENV === "test",
 });

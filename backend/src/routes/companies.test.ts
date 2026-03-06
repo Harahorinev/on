@@ -32,7 +32,7 @@ describe("GET /companies/me", () => {
       .get("/companies/me")
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/not found/i);
+    expect(res.body.message).toMatch(/Компания|найдена|Не найдено/);
   });
 
   it("returns 200 when COMPANY has company", async () => {
@@ -53,7 +53,7 @@ describe("GET /companies/:id", () => {
   it("returns 404 for unknown id", async () => {
     const res = await request(app).get("/companies/unknown-id-123");
     expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/not found/i);
+    expect(res.body.message).toMatch(/Компания|найдена|Не найдено/);
   });
 });
 
@@ -79,7 +79,7 @@ describe("POST /companies", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .send({ name: "X" });
     expect(res.status).toBe(403);
-    expect(res.body.message).toMatch(/COMPANY/);
+    expect(res.body.message).toMatch(/COMPANY|рол|создавать/);
   });
 
   it("returns 400 when name missing", async () => {
@@ -88,7 +88,7 @@ describe("POST /companies", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({});
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/name/);
+    expect(res.body.message).toMatch(/название|Укажите|Имя/);
   });
 
   it("returns 400 when name too long", async () => {
@@ -98,7 +98,7 @@ describe("POST /companies", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ name: longName });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/name|500|character/i);
+    expect(res.body.message).toMatch(/500|символ|Название/);
   });
 
   it("returns 201 and company when valid", async () => {
@@ -118,7 +118,7 @@ describe("POST /companies", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ name: "Second Co" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/already/);
+    expect(res.body.message).toMatch(/уже|есть компания/);
   });
 });
 

@@ -7,7 +7,7 @@ describe("GET /companies/:companyId/directions", () => {
   it("returns 404 when company not found", async () => {
     const res = await request(app).get("/companies/unknown-company-id/directions");
     expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/Company not found/i);
+    expect(res.body.message).toMatch(/Компания|найдена/);
   });
 });
 
@@ -41,7 +41,7 @@ describe("POST /companies/:companyId/directions", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .send({ name: "Dir" });
     expect(res.status).toBe(403);
-    expect(res.body.message).toMatch(/COMPANY/);
+    expect(res.body.message).toMatch(/COMPANY|направлен|управлять/);
   });
 
   it("returns 400 when name missing", async () => {
@@ -50,7 +50,7 @@ describe("POST /companies/:companyId/directions", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({});
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/name/);
+    expect(res.body.message).toMatch(/название|Укажите/);
   });
 
   it("returns 201 and direction when valid", async () => {
@@ -100,7 +100,7 @@ describe("GET /companies/:companyId/directions and GET /:directionId", () => {
   it("GET /:directionId returns 404 for unknown id", async () => {
     const res = await request(app).get(`/companies/${companyId}/directions/unknown-dir-id`);
     expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/Direction not found/i);
+    expect(res.body.message).toMatch(/Направление|найдено/);
   });
 });
 
@@ -149,7 +149,7 @@ describe("PATCH and DELETE /companies/:companyId/directions/:directionId", () =>
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ name: "   " });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/non-empty/);
+    expect(res.body.message).toMatch(/пуст|название/);
   });
 
   it("PATCH returns 200 and updates", async () => {

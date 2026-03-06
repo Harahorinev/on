@@ -57,7 +57,7 @@ describe("PATCH /user/preferences", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ calendarView: "day" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toContain("week or month");
+    expect(res.body.message).toMatch(/week|month|должно/);
   });
 
   it("rejects invalid calendarRange", async () => {
@@ -66,7 +66,7 @@ describe("PATCH /user/preferences", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ calendarRange: 5 });
     expect(res.status).toBe(400);
-    expect(res.body.message).toContain("7, 14, or 30");
+    expect(res.body.message).toMatch(/7|14|30/);
   });
 });
 
@@ -89,7 +89,7 @@ describe("PATCH /user/password", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ currentPassword: "wrong", newPassword });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/current|incorrect/i);
+    expect(res.body.message).toMatch(/Текущий|неверен|пароль/);
   });
 
   it("returns 400 when new password too short", async () => {
@@ -100,7 +100,7 @@ describe("PATCH /user/password", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ currentPassword, newPassword: "short" });
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/6/);
+    expect(res.body.message).toMatch(/6|символ|Пароль/);
   });
 
   it("returns 204 and changes password", async () => {
