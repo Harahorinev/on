@@ -3,11 +3,22 @@ import { Router } from "express";
 import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import type { BookingJoinedRow, BookingRow, SlotRow } from "../db-types.js";
 
 export const bookingsRouter = Router();
 
-function bookingToJson(row: any, slot?: any) {
-  const out: any = {
+function bookingToJson(
+  row: BookingRow,
+  slot?: SlotRow & { company?: { id: string; name: string } }
+) {
+  const out: {
+    id: string;
+    slotId: string;
+    userId: string;
+    status: string;
+    createdAt: string;
+    slot?: Record<string, unknown>;
+  } = {
     id: row.id,
     slotId: row.slot_id,
     userId: row.user_id,
@@ -42,7 +53,7 @@ bookingsRouter.get("/me", authMiddleware, (req, res) => {
        WHERE b.user_id = ? AND b.status = 'CONFIRMED'
        ORDER BY b.created_at DESC`
     )
-    .all(req.userId!) as Array<any>;
+    .all(req.userId!) as BookingJoinedRow[];
   const bookings = rows.map((r) =>
     bookingToJson(r, {
       id: r.s_id,
@@ -70,7 +81,7 @@ bookingsRouter.get("/:id", authMiddleware, (req, res, next) => {
        JOIN companies c ON s.company_id = c.id
        WHERE b.id = ?`
     )
-    .get(req.params.id) as any;
+    .get(req.params.id) as BookingJoinedRow | undefined;
   if (!row) {
     next(new AppError(404, "Booking not found"));
     return;
@@ -101,7 +112,7 @@ export function createBookingForSlot(req: express.Request, res: express.Response
     next(new AppError(403, "Only USER can create bookings"));
     return;
   }
-  const slot = db.prepare("SELECT * FROM slots WHERE id = ?").get(slotId) as any;
+  const slot = db.prepare("SELECT * FROM slots WHERE id = ?").get(slotId) as SlotRow | undefined;
   if (!slot) {
     next(new AppError(404, "Slot not found"));
     return;
@@ -130,7 +141,7 @@ export function createBookingForSlot(req: express.Request, res: express.Response
     bookingId = uuid();
     db.prepare("INSERT INTO bookings (id, slot_id, user_id) VALUES (?, ?, ?)").run(bookingId, slotId, req.userId!);
   }
-  const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(bookingId) as any;
+  const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(bookingId) as BookingRow;
   const c = db.prepare("SELECT id, name FROM companies WHERE id = ?").get(slot.company_id) as { id: string; name: string };
   res.status(201).json(
     bookingToJson(row, {
@@ -141,7 +152,7 @@ export function createBookingForSlot(req: express.Request, res: express.Response
 }
 
 bookingsRouter.delete("/:id", authMiddleware, (req, res, next) => {
-  const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as any;
+  const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as BookingRow | undefined;
   if (!row) {
     next(new AppError(404, "Booking not found"));
     return;
@@ -151,8 +162,8 @@ bookingsRouter.delete("/:id", authMiddleware, (req, res, next) => {
     return;
   }
   db.prepare("UPDATE bookings SET status = 'CANCELLED' WHERE id = ?").run(req.params.id);
-  const slot = db.prepare("SELECT * FROM slots WHERE id = ?").get(row.slot_id) as any;
+  const slot = db.prepare("SELECT * FROM slots WHERE id = ?").get(row.slot_id) as SlotRow;
   const c = db.prepare("SELECT id, name FROM companies WHERE id = ?").get(slot.company_id) as { id: string; name: string };
-  const updated = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as any;
+  const updated = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as BookingRow;
   res.json(bookingToJson(updated, { ...slot, company: c }));
 });

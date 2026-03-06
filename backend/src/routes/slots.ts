@@ -4,10 +4,11 @@ import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
+import type { SlotRow, SlotRowWithCompany } from "../db-types.js";
 
 export const slotsRouter = Router({ mergeParams: true });
 
-export function slotToJson(row: any, company?: { id: string; name: string }) {
+export function slotToJson(row: SlotRow, company?: { id: string; name: string }) {
   return {
     id: row.id,
     companyId: row.company_id,
@@ -27,7 +28,7 @@ export function getSlotById(req: express.Request, res: express.Response, next: e
     .prepare(
       "SELECT s.*, c.id as cid, c.name as cname FROM slots s JOIN companies c ON s.company_id = c.id WHERE s.id = ?"
     )
-    .get(req.params.id) as any;
+    .get(req.params.id) as SlotRowWithCompany | undefined;
   if (!row) {
     next(new AppError(404, "Slot not found"));
     return;
@@ -54,7 +55,7 @@ slotsRouter.get("/", (req, res, next) => {
     params.push(dateTo);
   }
   sql += " ORDER BY s.start_at";
-  const rows = db.prepare(sql).all(...params) as Array<any>;
+  const rows = db.prepare(sql).all(...params) as SlotRowWithCompany[];
   const slots = rows.map((r) =>
     slotToJson(r, { id: r.cid, name: r.cname })
   );
@@ -66,7 +67,7 @@ slotsRouter.get("/:slotId", (req, res, next) => {
     .prepare(
       "SELECT s.*, c.id as cid, c.name as cname FROM slots s JOIN companies c ON s.company_id = c.id WHERE s.id = ?"
     )
-    .get(req.params.slotId) as any;
+    .get(req.params.slotId) as SlotRowWithCompany | undefined;
   if (!row) {
     next(new AppError(404, "Slot not found"));
     return;
@@ -135,7 +136,7 @@ slotsRouter.post("/", authMiddleware, (req, res, next) => {
     description ?? null,
     location ?? null
   );
-  const row = db.prepare("SELECT * FROM slots WHERE id = ?").get(id) as any;
+  const row = db.prepare("SELECT * FROM slots WHERE id = ?").get(id) as SlotRow;
   const c = db.prepare("SELECT id, name FROM companies WHERE id = ?").get(companyId) as {
     id: string;
     name: string;
@@ -153,7 +154,7 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
     next(new AppError(403, "Forbidden"));
     return;
   }
-  const slot = db.prepare("SELECT * FROM slots WHERE id = ? AND company_id = ?").get(slotId, companyId) as any;
+  const slot = db.prepare("SELECT * FROM slots WHERE id = ? AND company_id = ?").get(slotId, companyId) as SlotRow | undefined;
   if (!slot) {
     next(new AppError(404, "Slot not found"));
     return;
@@ -231,7 +232,11 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
   }
   const row = db
     .prepare("SELECT s.*, c.id as cid, c.name as cname FROM slots s JOIN companies c ON s.company_id = c.id WHERE s.id = ?")
-    .get(slotId) as any;
+    .get(slotId) as SlotRowWithCompany | undefined;
+  if (!row) {
+    next(new AppError(404, "Slot not found"));
+    return;
+  }
   res.json(slotToJson(row, { id: row.cid, name: row.cname }));
 });
 

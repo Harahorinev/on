@@ -3,6 +3,7 @@ import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
+import type { DirectionRow } from "../db-types.js";
 
 export const directionsRouter = Router({ mergeParams: true });
 
@@ -26,7 +27,7 @@ function ensureCompanyOwner(req: Request, res: Response, next: NextFunction): bo
   return true;
 }
 
-function directionToJson(row: { id: string; company_id: string; name: string; description: string | null; sort_order: number; created_at: string }) {
+function directionToJson(row: DirectionRow) {
   return {
     id: row.id,
     companyId: row.company_id,
@@ -144,12 +145,12 @@ directionsRouter.patch("/:directionId", authMiddleware, (req, res, next) => {
     values.push(Number(sortOrder));
   }
   if (updates.length === 0) {
-    const row = db.prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ?").get(directionId) as any;
+    const row = db.prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ?").get(directionId) as DirectionRow;
     return res.json(directionToJson(row));
   }
   values.push(directionId);
   db.prepare(`UPDATE directions SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-  const row = db.prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ?").get(directionId) as any;
+  const row = db.prepare("SELECT id, company_id, name, description, sort_order, created_at FROM directions WHERE id = ?").get(directionId) as DirectionRow;
   res.json(directionToJson(row));
 });
 

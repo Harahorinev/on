@@ -3,6 +3,7 @@ import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
+import type { CompanyRowWithOwner } from "../db-types.js";
 
 export const companiesRouter = Router();
 
@@ -189,7 +190,11 @@ companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
       .prepare(
         "SELECT c.id, c.name, c.description, c.timezone, u.id as oid, u.email as owner_email, u.name as owner_name FROM companies c JOIN users u ON c.owner_id = u.id WHERE c.id = ?"
       )
-      .get(req.params.id) as any;
+      .get(req.params.id) as CompanyRowWithOwner | undefined;
+    if (!row) {
+      next(new AppError(404, "Company not found"));
+      return;
+    }
     return res.json({
       id: row.id,
       name: row.name,
@@ -204,7 +209,7 @@ companiesRouter.patch("/:id", authMiddleware, (req, res, next) => {
     .prepare(
       "SELECT c.id, c.name, c.description, c.timezone, u.id as oid, u.email as owner_email, u.name as owner_name FROM companies c JOIN users u ON c.owner_id = u.id WHERE c.id = ?"
     )
-    .get(req.params.id) as any;
+    .get(req.params.id) as CompanyRowWithOwner;
   res.json({
     id: row.id,
     name: row.name,

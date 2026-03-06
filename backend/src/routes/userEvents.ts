@@ -3,18 +3,11 @@ import { db, uuid } from "../db.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
+import type { UserEventRow, UserEventRowMin } from "../db-types.js";
 
 export const userEventsRouter = Router();
 
-function eventToJson(row: {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string | null;
-  start_at: string;
-  end_at: string;
-  created_at: string;
-}) {
+function eventToJson(row: UserEventRow) {
   return {
     id: row.id,
     userId: row.user_id,
@@ -43,15 +36,7 @@ userEventsRouter.get("/", authMiddleware, (req: Request, res: Response, next: Ne
     params.push(dateTo);
   }
   sql += " ORDER BY start_at";
-  const rows = db.prepare(sql).all(...params) as Array<{
-    id: string;
-    user_id: string;
-    title: string;
-    description: string | null;
-    start_at: string;
-    end_at: string;
-    created_at: string;
-  }>;
+  const rows = db.prepare(sql).all(...params) as UserEventRow[];
   res.json(rows.map(eventToJson));
 });
 
@@ -93,14 +78,14 @@ userEventsRouter.post("/", authMiddleware, (req: Request, res: Response, next: N
   db.prepare(
     "INSERT INTO user_events (id, user_id, title, description, start_at, end_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(id, req.userId!, title.trim(), description?.trim() || null, start.toISOString(), end.toISOString());
-  const row = db.prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?").get(id) as any;
+  const row = db.prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?").get(id) as UserEventRow;
   res.status(201).json(eventToJson(row));
 });
 
 userEventsRouter.get("/:id", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   const row = db
     .prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?")
-    .get(req.params.id) as any;
+    .get(req.params.id) as UserEventRow | undefined;
   if (!row) {
     next(new AppError(404, "Event not found"));
     return;
@@ -113,7 +98,7 @@ userEventsRouter.get("/:id", authMiddleware, (req: Request, res: Response, next:
 });
 
 userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
-  const row = db.prepare("SELECT id, user_id FROM user_events WHERE id = ?").get(req.params.id) as any;
+  const row = db.prepare("SELECT id, user_id FROM user_events WHERE id = ?").get(req.params.id) as UserEventRowMin | undefined;
   if (!row || row.user_id !== req.userId) {
     next(new AppError(row ? 403 : 404, row ? "Forbidden" : "Event not found"));
     return;
@@ -162,17 +147,17 @@ userEventsRouter.patch("/:id", authMiddleware, (req: Request, res: Response, nex
     values.push(d.toISOString());
   }
   if (updates.length === 0) {
-    const r = db.prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?").get(req.params.id) as any;
+    const r = db.prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?").get(req.params.id) as UserEventRow;
     return res.json(eventToJson(r));
   }
   values.push(req.params.id);
   db.prepare(`UPDATE user_events SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-  const updated = db.prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?").get(req.params.id) as any;
+  const updated = db.prepare("SELECT id, user_id, title, description, start_at, end_at, created_at FROM user_events WHERE id = ?").get(req.params.id) as UserEventRow;
   res.json(eventToJson(updated));
 });
 
 userEventsRouter.delete("/:id", authMiddleware, (req: Request, res: Response, next: NextFunction) => {
-  const row = db.prepare("SELECT id, user_id FROM user_events WHERE id = ?").get(req.params.id) as any;
+  const row = db.prepare("SELECT id, user_id FROM user_events WHERE id = ?").get(req.params.id) as UserEventRowMin | undefined;
   if (!row || row.user_id !== req.userId) {
     next(new AppError(row ? 403 : 404, row ? "Forbidden" : "Event not found"));
     return;
