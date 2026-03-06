@@ -19,7 +19,7 @@ cd frontend-company && npm install && npm run build && npm run preview &
 cd frontend && npm run dev
 ```
 
-По умолчанию host рендерит локальные страницы (логин, компании и т.д.). Чтобы использовать микрофронтенды, задайте `VITE_USE_MF=true` и запустите remotes на портах 5174 (auth), 5175 (user), 5176 (company). В проде URL remotes задаются через `VITE_REMOTE_AUTH_URL`, `VITE_REMOTE_USER_URL`, `VITE_REMOTE_COMPANY_URL` (базовый URL до `/assets/remoteEntry.js`).
+По умолчанию host рендерит локальные страницы. Чтобы использовать микрофронтенды локально: `VITE_USE_MF=true` в `frontend/.env` и запуск remotes на 5174, 5175, 5176. В проде при деплое remotes собираются и кладутся в `frontend/dist/remote-auth`, `remote-user`, `remote-company`; host собирается с `VITE_USE_MF=true` и URL вида `https://och-net.ru/remote-auth` и т.д. (один домен, статика remotes по путям `/remote-auth/`, `/remote-user/`, `/remote-company/`).
 
 ## Деплой и окружение — см. [DEPLOY.md](DEPLOY.md) и [docs/deploy-cd.md](docs/deploy-cd.md).
 

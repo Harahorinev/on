@@ -124,6 +124,13 @@ jobs:
             echo "Building at commit: $(git rev-parse --short HEAD)"
             cd backend && npm ci && npm run build
             pm2 restart on-backend || true
-            cd ../frontend && npm ci && npm run build
+            cd ../frontend-auth && npm ci && npm run build
+            cd ../frontend-user && npm ci && npm run build
+            cd ../frontend-company && npm ci && npm run build
+            cd ../frontend
+            VITE_USE_MF=true VITE_REMOTE_AUTH_URL=https://och-net.ru/remote-auth VITE_REMOTE_USER_URL=https://och-net.ru/remote-user VITE_REMOTE_COMPANY_URL=https://och-net.ru/remote-company npm ci && npm run build
+            cp -r ../frontend-auth/dist dist/remote-auth
+            cp -r ../frontend-user/dist dist/remote-user
+            cp -r ../frontend-company/dist dist/remote-company
             trap - ERR
             echo "Deploy finished."
