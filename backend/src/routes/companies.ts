@@ -9,7 +9,7 @@ companiesRouter.get("/", (_req, res) => {
   const rows = db
     .prepare(
       `SELECT c.id, c.name, c.description, c.timezone, c.owner_id,
-              u.id as owner_id, u.email as owner_email, u.name as owner_name
+              u.id as owner_user_id, u.email as owner_email, u.name as owner_name
        FROM companies c
        JOIN users u ON c.owner_id = u.id
        ORDER BY c.name`
@@ -20,6 +20,7 @@ companiesRouter.get("/", (_req, res) => {
     description: string | null;
     timezone: string;
     owner_id: string;
+    owner_user_id: string;
     owner_email: string;
     owner_name: string;
   }>;
@@ -29,7 +30,7 @@ companiesRouter.get("/", (_req, res) => {
       name: r.name,
       description: r.description ?? undefined,
       timezone: r.timezone,
-      owner: { id: r.owner_id, email: r.owner_email, name: r.owner_name },
+      owner: { id: r.owner_user_id, email: r.owner_email, name: r.owner_name },
     }))
   );
 });
