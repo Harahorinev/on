@@ -13,12 +13,12 @@ declare module 'auth/AuthApp' {
 
 declare module 'user/UserApp' {
   import type { User } from './lib/api';
-  const UserApp: React.FC<{ user: User | null }>;
+  const UserApp: React.FC<{ user: User | null; notifySuccess: (msg: string) => void }>;
   export default UserApp;
 }
 
 declare module 'company/CompanyApp' {
   import type { User } from './lib/api';
-  const CompanyApp: React.FC<{ user: User | null }>;
+  const CompanyApp: React.FC<{ user: User | null; notifySuccess: (msg: string) => void }>;
   export default CompanyApp;
 }

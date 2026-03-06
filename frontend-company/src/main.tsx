@@ -4,6 +4,6 @@ import App from './App';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App user={null} />
+    <App user={null} notifySuccess={() => {}} />
   </StrictMode>
 );

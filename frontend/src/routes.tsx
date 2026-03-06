@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { useNotifications } from './contexts/NotificationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -53,18 +54,20 @@ function AuthRemote() {
 
 function UserRemote() {
   const { user } = useAuth();
+  const { notifySuccess } = useNotifications();
   return (
     <Suspense fallback={<RemoteFallback />}>
-      <UserApp user={user} />
+      <UserApp user={user} notifySuccess={notifySuccess} />
     </Suspense>
   );
 }
 
 function CompanyRemote() {
   const { user } = useAuth();
+  const { notifySuccess } = useNotifications();
   return (
     <Suspense fallback={<RemoteFallback />}>
-      <CompanyApp user={user} />
+      <CompanyApp user={user} notifySuccess={notifySuccess} />
     </Suspense>
   );
 }
