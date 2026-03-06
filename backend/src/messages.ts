@@ -27,6 +27,13 @@ export const msg = {
   // Rate limit
   auth_tooManyAttempts: "Слишком много попыток входа. Попробуйте позже.",
 
+  // B62: Forgot password
+  auth_forgotPasswordSuccess:
+    "Если указанный email зарегистрирован, на него отправлена ссылка для сброса пароля.",
+  auth_resetTokenInvalid: "Недействительная или просроченная ссылка сброса пароля.",
+  auth_resetEmailRequired: "Укажите email",
+  auth_resetTokenAndPasswordRequired: "Укажите токен сброса и новый пароль",
+
   // Companies
   company_notFound: "Компания не найдена",
   company_onlyCompanyCanCreate: "Создавать компанию может только пользователь с ролью COMPANY",

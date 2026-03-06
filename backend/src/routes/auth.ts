@@ -1,9 +1,12 @@
 import { Router } from "express";
 import {
+  consumePasswordResetToken,
+  createPasswordResetToken,
   createUser,
   findUserByEmail,
   rowToUser,
   signToken,
+  updatePassword,
   verifyPassword,
 } from "../auth.js";
 import { AppError } from "../errors.js";
@@ -78,4 +81,44 @@ authRouter.post("/login", (req, res, next) => {
   const user = rowToUser(row);
   const accessToken = signToken(user);
   res.json({ accessToken, user });
+});
+
+/** B62: POST /auth/forgot-password — request password reset. Body: { email }. Rate-limited with /auth. */
+authRouter.post("/forgot-password", (req, res, next) => {
+  const { email } = req.body ?? {};
+  if (!email || typeof email !== "string" || !email.trim()) {
+    next(new AppError(400, msg.auth_resetEmailRequired));
+    return;
+  }
+  if (!isValidEmail(email)) {
+    next(new AppError(400, msg.auth_invalidEmailFormat));
+    return;
+  }
+  const row = findUserByEmail(email);
+  if (row) {
+    createPasswordResetToken(row.id);
+    // B63: send reset email with link containing token (stub for now)
+  }
+  res.status(200).json({ message: msg.auth_forgotPasswordSuccess });
+});
+
+/** B62: POST /auth/reset-password — set new password with token. Body: { token, newPassword }. */
+authRouter.post("/reset-password", (req, res, next) => {
+  const { token, newPassword } = req.body ?? {};
+  if (!token || typeof token !== "string" || !token.trim() || newPassword === undefined) {
+    next(new AppError(400, msg.auth_resetTokenAndPasswordRequired));
+    return;
+  }
+  const pwdErr = validatePasswordLength(newPassword);
+  if (pwdErr) {
+    next(new AppError(400, pwdErr));
+    return;
+  }
+  const userId = consumePasswordResetToken(token.trim());
+  if (!userId) {
+    next(new AppError(400, msg.auth_resetTokenInvalid));
+    return;
+  }
+  updatePassword(userId, newPassword as string);
+  res.status(204).send();
 });

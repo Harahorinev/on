@@ -100,6 +100,16 @@ db.exec(`
     preferences TEXT NOT NULL DEFAULT '{}'
   );
 
+  /* B62: Tokens for forgot-password flow. Expire after 1 hour; invalidate after use. */
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+  CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires ON password_reset_tokens(expires_at);
+
   CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id);
   CREATE INDEX IF NOT EXISTS idx_user_events_user ON user_events(user_id);
   CREATE INDEX IF NOT EXISTS idx_slots_company ON slots(company_id);

@@ -4,6 +4,7 @@ import express from "express";
 import { rateLimit } from "express-rate-limit";
 import { app } from "../index.js";
 import { createUser } from "../auth.js";
+import { db } from "../db.js";
 import { authRouter } from "./auth.js";
 import { errorHandler } from "../errors.js";
 
@@ -118,6 +119,107 @@ describe("POST /auth/login", () => {
     expect(res.status).toBe(200);
     expect(res.body.accessToken).toBeTruthy();
     expect(res.body.user).toMatchObject({ email: "login-ok@test.co", name: "Login User", role: "USER" });
+  });
+});
+
+describe("POST /auth/forgot-password (B62)", () => {
+  it("returns 400 when email missing", async () => {
+    const res = await request(app).post("/auth/forgot-password").send({});
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/email|Укажите/);
+  });
+
+  it("returns 400 when email format invalid", async () => {
+    const res = await request(app).post("/auth/forgot-password").send({ email: "bad" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/формат|Неверн/);
+  });
+
+  it("returns 200 and same message whether email exists or not", async () => {
+    createUser("forgot-exists@test.co", "pass123", "User", "USER");
+    const resExist = await request(app)
+      .post("/auth/forgot-password")
+      .send({ email: "forgot-exists@test.co" });
+    const resNotExist = await request(app)
+      .post("/auth/forgot-password")
+      .send({ email: "forgot-nonexistent@test.co" });
+    expect(resExist.status).toBe(200);
+    expect(resNotExist.status).toBe(200);
+    expect(resExist.body.message).toBe(resNotExist.body.message);
+    expect(resExist.body.message).toMatch(/email|ссылк|сброс/);
+  });
+});
+
+describe("POST /auth/reset-password (B62)", () => {
+  it("returns 400 when token or newPassword missing", async () => {
+    const res1 = await request(app).post("/auth/reset-password").send({ newPassword: "newpass123" });
+    const res2 = await request(app).post("/auth/reset-password").send({ token: "some-token" });
+    expect(res1.status).toBe(400);
+    expect(res2.status).toBe(400);
+    expect(res1.body.message).toMatch(/токен|пароль|Укажите/);
+  });
+
+  it("returns 400 when token invalid or expired", async () => {
+    const res = await request(app)
+      .post("/auth/reset-password")
+      .send({ token: "invalid-token-12345", newPassword: "newpass123" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Недействительн|просрочен|ссылк/);
+  });
+
+  it("returns 400 when newPassword too short", async () => {
+    createUser("reset-short@test.co", "oldpass", "User", "USER");
+    await request(app).post("/auth/forgot-password").send({ email: "reset-short@test.co" });
+    const row = db
+      .prepare(
+        "SELECT prt.token FROM password_reset_tokens prt JOIN users u ON u.id = prt.user_id WHERE u.email = ?"
+      )
+      .get("reset-short@test.co") as { token: string } | undefined;
+    expect(row).toBeTruthy();
+    const res = await request(app)
+      .post("/auth/reset-password")
+      .send({ token: row!.token, newPassword: "12345" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/6|Пароль|символ/);
+  });
+
+  it("returns 204 and password is changed when token valid", async () => {
+    createUser("reset-ok@test.co", "oldpass", "Reset User", "USER");
+    await request(app).post("/auth/forgot-password").send({ email: "reset-ok@test.co" });
+    const row = db
+      .prepare(
+        "SELECT prt.token FROM password_reset_tokens prt JOIN users u ON u.id = prt.user_id WHERE u.email = ?"
+      )
+      .get("reset-ok@test.co") as { token: string } | undefined;
+    expect(row).toBeTruthy();
+    const res = await request(app)
+      .post("/auth/reset-password")
+      .send({ token: row!.token, newPassword: "newpass123" });
+    expect(res.status).toBe(204);
+    const loginRes = await request(app)
+      .post("/auth/login")
+      .send({ email: "reset-ok@test.co", password: "newpass123" });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.accessToken).toBeTruthy();
+  });
+
+  it("returns 400 when token reused", async () => {
+    createUser("reset-once@test.co", "oldpass", "User", "USER");
+    await request(app).post("/auth/forgot-password").send({ email: "reset-once@test.co" });
+    const row = db
+      .prepare(
+        "SELECT prt.token FROM password_reset_tokens prt JOIN users u ON u.id = prt.user_id WHERE u.email = ?"
+      )
+      .get("reset-once@test.co") as { token: string } | undefined;
+    expect(row).toBeTruthy();
+    await request(app)
+      .post("/auth/reset-password")
+      .send({ token: row!.token, newPassword: "newpass123" });
+    const resReuse = await request(app)
+      .post("/auth/reset-password")
+      .send({ token: row!.token, newPassword: "another123" });
+    expect(resReuse.status).toBe(400);
+    expect(resReuse.body.message).toMatch(/Недействительн|просрочен/);
   });
 });
 

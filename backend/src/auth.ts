@@ -105,6 +105,30 @@ export function updatePassword(userId: string, newPassword: string): void {
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, userId);
 }
 
+/** B62: Create a password reset token for user, valid 1 hour. Returns the token. */
+export function createPasswordResetToken(userId: string): string {
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  db.prepare("INSERT INTO password_reset_tokens (token, user_id, expires_at) VALUES (?, ?, ?)").run(
+    token,
+    userId,
+    expiresAt
+  );
+  return token;
+}
+
+/** B62: If token is valid and not expired, returns userId and deletes the token. Otherwise null. */
+export function consumePasswordResetToken(token: string): string | null {
+  const row = db
+    .prepare(
+      "SELECT user_id FROM password_reset_tokens WHERE token = ? AND expires_at > datetime('now')"
+    )
+    .get(token) as { user_id: string } | undefined;
+  if (!row) return null;
+  db.prepare("DELETE FROM password_reset_tokens WHERE token = ?").run(token);
+  return row.user_id;
+}
+
 declare global {
   namespace Express {
     interface Request {
