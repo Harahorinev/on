@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
+import express from "express";
+import { rateLimit } from "express-rate-limit";
 import { app } from "../index.js";
 import { createUser } from "../auth.js";
+import { authRouter } from "./auth.js";
+import { errorHandler } from "../errors.js";
 
 describe("POST /auth/register", () => {
   it("returns 400 when body fields missing", async () => {
@@ -80,5 +84,29 @@ describe("POST /auth/login", () => {
     expect(res.status).toBe(200);
     expect(res.body.accessToken).toBeTruthy();
     expect(res.body.user).toMatchObject({ email: "login-ok@test.co", name: "Login User", role: "USER" });
+  });
+});
+
+describe("auth rate limiting", () => {
+  it("returns 429 when exceeding rate limit on /auth/login", async () => {
+    const limitedApp = express();
+    limitedApp.use(express.json());
+    limitedApp.use(
+      "/auth",
+      rateLimit({
+        windowMs: 60_000,
+        max: 2,
+        skip: () => false,
+        message: { message: "Too many auth attempts, please try again later." },
+      }),
+      authRouter
+    );
+    limitedApp.use(errorHandler);
+
+    await request(limitedApp).post("/auth/login").send({ email: "a@b.co", password: "x" });
+    await request(limitedApp).post("/auth/login").send({ email: "a@b.co", password: "y" });
+    const res = await request(limitedApp).post("/auth/login").send({ email: "a@b.co", password: "z" });
+    expect(res.status).toBe(429);
+    expect(res.body.message).toMatch(/too many|try again later/i);
   });
 });

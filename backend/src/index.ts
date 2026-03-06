@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import "./db.js";
 import { authMiddleware } from "./auth.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
@@ -30,7 +31,14 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, timestamp: new Date().toISOString() });
 });
 
-app.use("/auth", authRouter);
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many auth attempts, please try again later." },
+  standardHeaders: true,
+  skip: () => process.env.NODE_ENV === "test",
+});
+app.use("/auth", authLimiter, authRouter);
 app.use("/companies", companiesRouter);
 app.get("/slots/:id", getSlotById);
 app.post("/slots/:slotId/bookings", authMiddleware, createBookingForSlot);
