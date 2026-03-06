@@ -113,7 +113,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 60s
+          command_timeout: 300s
           script: |
             set -e
             cd /var/www/on || { echo "Directory /var/www/on not found"; exit 1; }
