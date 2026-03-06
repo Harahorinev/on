@@ -101,7 +101,8 @@ authRouter.post("/forgot-password", (req, res, next) => {
   if (row) {
     const token = createPasswordResetToken(row.id);
     const baseUrl = (process.env.FRONTEND_URL ?? process.env.APP_URL ?? "").replace(/\/$/, "");
-    const locale = (req.headers["accept-language"]?.includes("en") ? "en" : "ru") as Locale;
+    const acceptLanguage = req.headers["accept-language"]?.toString().toLowerCase() ?? "";
+    const locale: Locale = acceptLanguage.startsWith("ru") ? "ru" : "en";
     if (baseUrl) {
       const resetLink = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
       const { subject, text, html } = getPasswordResetEmail(resetLink, locale);
