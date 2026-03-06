@@ -7,6 +7,7 @@ import {
   verifyPassword,
 } from "../auth.js";
 import { AppError } from "../errors.js";
+import { logger } from "../logger.js";
 import { LIMITS, isValidEmail, validateMaxLength, validatePasswordLength } from "../validation.js";
 
 export const authRouter = Router();
@@ -53,7 +54,7 @@ authRouter.post("/register", (req, res, next) => {
       next(new AppError(409, "Email already registered"));
       return;
     }
-    console.error("Register error:", e);
+    logger.error({ err: e }, "Register error");
     next(new AppError(500, "Registration failed"));
   }
 });

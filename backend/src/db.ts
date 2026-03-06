@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { logger } from "./logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const defaultDbPath = path.join(__dirname, "..", "data.db");
@@ -16,7 +17,7 @@ function resolveDbPath(): string {
     if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
     return resolved;
   } catch {
-    console.warn("DB_PATH directory not writable, using default:", defaultDbPath);
+    logger.warn({ defaultDbPath }, "DB_PATH directory not writable, using default");
     return path.resolve(defaultDbPath);
   }
 }

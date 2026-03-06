@@ -5,6 +5,7 @@ import { rateLimit } from "express-rate-limit";
 import "./db.js";
 import { authMiddleware } from "./auth.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
+import { logger } from "./logger.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
 import { companiesRouter } from "./routes/companies.js";
@@ -56,6 +57,6 @@ export { app };
 
 if (process.env.NODE_ENV !== "test") {
   app.listen(port, () => {
-    console.log(`Backend running at http://localhost:${port}`);
+    logger.info({ port }, "Backend listening");
   });
 }

@@ -3,13 +3,14 @@ import express, { type Request } from "express";
 import jwt from "jsonwebtoken";
 import { db, uuid } from "./db.js";
 import { AppError } from "./errors.js";
+import { logger } from "./logger.js";
 
 const DEV_JWT_SECRET = "dev-secret-change-in-production";
 const JWT_SECRET = process.env.JWT_SECRET ?? DEV_JWT_SECRET;
 
 if (process.env.NODE_ENV === "production") {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEV_JWT_SECRET) {
-    console.error("Fatal: JWT_SECRET must be set to a secure value in production. Do not use the default.");
+    logger.fatal("JWT_SECRET must be set to a secure value in production. Do not use the default.");
     process.exit(1);
   }
 }
