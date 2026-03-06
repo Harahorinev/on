@@ -12,6 +12,9 @@ import {
 import { AppError } from "../errors.js";
 import { logger } from "../logger.js";
 import { msg } from "../messages.js";
+import { sendEmail } from "../notification.js";
+import { getPasswordResetEmail } from "../templates.js";
+import type { Locale } from "../templates.js";
 import { LIMITS, isValidEmail, validateMaxLength, validatePasswordLength } from "../validation.js";
 
 export const authRouter = Router();
@@ -96,8 +99,16 @@ authRouter.post("/forgot-password", (req, res, next) => {
   }
   const row = findUserByEmail(email);
   if (row) {
-    createPasswordResetToken(row.id);
-    // B63: send reset email with link containing token (stub for now)
+    const token = createPasswordResetToken(row.id);
+    const baseUrl = (process.env.FRONTEND_URL ?? process.env.APP_URL ?? "").replace(/\/$/, "");
+    const locale = (req.headers["accept-language"]?.includes("en") ? "en" : "ru") as Locale;
+    if (baseUrl) {
+      const resetLink = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+      const { subject, text, html } = getPasswordResetEmail(resetLink, locale);
+      void sendEmail({ to: row.email, subject, text, html }).catch(() => {
+        /* already logged in notification */
+      });
+    }
   }
   res.status(200).json({ message: msg.auth_forgotPasswordSuccess });
 });
