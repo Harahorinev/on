@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { ChatWidget } from './ChatWidget';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -77,6 +78,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className="container pt-main">
         {children}
       </main>
+      {user && <ChatWidget />}
     </>
   );
 }
