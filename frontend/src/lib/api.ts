@@ -237,3 +237,20 @@ export const userApi = {
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.patch('/user/password', data),
 };
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface ChatResponse {
+  conversationId: string;
+  messages: ChatMessage[];
+}
+
+export const chatApi = {
+  sendToAssistant: (params: { message: string; conversationId?: string; bookingId?: string; userEventId?: string }) =>
+    api.post<ChatResponse>('/chat/ai', params),
+};
