@@ -88,6 +88,10 @@ export const msg = {
   user_calendarRangeValues: "calendarRange должно быть 7, 14 или 30",
   user_currentAndNewPasswordRequired: "Укажите текущий и новый пароль",
   user_currentPasswordIncorrect: "Текущий пароль неверен",
+
+  // Chat (B55)
+  chat_messageRequired: "Укажите текст сообщения.",
+  chat_conversationNotFound: "Диалог не найден или недоступен.",
 } as const;
 
 /** Validation messages (used by validation.ts). */

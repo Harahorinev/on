@@ -100,6 +100,38 @@ db.exec(`
     preferences TEXT NOT NULL DEFAULT '{}'
   );
 
+  /* B55: Chat conversations between users and assistants (and, в будущем, user↔user).
+   * type:
+   *  - 'assistant' — диалог пользователь ↔ AI
+   *  - 'direct'    — зарезервировано под user↔user (будет реализовано позже)
+   */
+  CREATE TABLE IF NOT EXISTS chat_conversations (
+    id TEXT PRIMARY KEY,
+    owner_user_id TEXT NOT NULL REFERENCES users(id),
+    type TEXT NOT NULL CHECK(type IN ('assistant', 'direct')),
+    title TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_message_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_conversations_owner ON chat_conversations(owner_user_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_conversations_type ON chat_conversations(type);
+
+  /* B55: Chat messages. Для user↔user в будущем sender_user_id будет ссылаться на пользователей,
+   * для AI-ответов sender_role='assistant' и sender_user_id=NULL.
+   */
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+    sender_role TEXT NOT NULL CHECK(sender_role IN ('user', 'assistant')),
+    sender_user_id TEXT REFERENCES users(id),
+    content TEXT NOT NULL,
+    booking_id TEXT REFERENCES bookings(id),
+    user_event_id TEXT REFERENCES user_events(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages(conversation_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_role, sender_user_id);
+
   /* B62: Tokens for forgot-password flow. Expire after 1 hour; invalidate after use. */
   CREATE TABLE IF NOT EXISTS password_reset_tokens (
     token TEXT PRIMARY KEY,

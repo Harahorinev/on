@@ -9,6 +9,7 @@ import { logger } from "./logger.js";
 import { msg } from "./messages.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
+import { chatRouter } from "./routes/chat.js";
 import { companiesRouter } from "./routes/companies.js";
 import { directionsRouter } from "./routes/directions.js";
 import { getSlotById, slotsRouter } from "./routes/slots.js";
@@ -47,6 +48,7 @@ app.post("/slots/:slotId/bookings", authMiddleware, createBookingForSlot);
 app.use("/bookings", bookingsRouter);
 app.use("/user/events", authMiddleware, userEventsRouter);
 app.use("/user", userRouter);
+app.use("/chat", authMiddleware, chatRouter);
 
 companiesRouter.use("/:companyId/slots", slotsRouter);
 companiesRouter.use("/:companyId/directions", directionsRouter);
