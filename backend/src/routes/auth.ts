@@ -1,6 +1,8 @@
 import { Router } from "express";
 import {
+  consumeEmailVerificationToken,
   consumePasswordResetToken,
+  createEmailVerificationToken,
   createPasswordResetToken,
   createUser,
   findUserByEmail,
@@ -13,7 +15,7 @@ import { AppError } from "../errors.js";
 import { logger } from "../logger.js";
 import { msg } from "../messages.js";
 import { sendEmail } from "../notification.js";
-import { getPasswordResetEmail } from "../templates.js";
+import { getEmailVerificationEmail, getPasswordResetEmail } from "../templates.js";
 import type { Locale } from "../templates.js";
 import { LIMITS, isValidEmail, validateMaxLength, validatePasswordLength } from "../validation.js";
 
@@ -48,8 +50,19 @@ authRouter.post("/register", (req, res, next) => {
     return;
   }
   try {
-    const user = createUser(email, password, name, role);
+    const user = createUser(email, password, name, role, { emailVerified: false });
     const accessToken = signToken(user);
+    const baseUrl = (process.env.FRONTEND_URL ?? process.env.APP_URL ?? "").replace(/\/$/, "");
+    if (baseUrl) {
+      const verifyToken = createEmailVerificationToken(user.id);
+      const verifyLink = `${baseUrl}/confirm-email?token=${encodeURIComponent(verifyToken)}`;
+      const acceptLanguage = req.headers["accept-language"]?.toString().toLowerCase() ?? "";
+      const locale: Locale = acceptLanguage.startsWith("ru") ? "ru" : "en";
+      const { subject, text, html } = getEmailVerificationEmail(verifyLink, locale);
+      void sendEmail({ to: user.email, subject, text, html }).catch(() => {
+        /* already logged in notification */
+      });
+    }
     res.status(201).json({ accessToken, user });
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string };
@@ -79,6 +92,10 @@ authRouter.post("/login", (req, res, next) => {
   const row = findUserByEmail(email);
   if (!row || !verifyPassword(password, row.password_hash)) {
     next(new AppError(401, msg.auth_invalidEmailOrPassword));
+    return;
+  }
+   if (!row.email_verified) {
+    next(new AppError(403, msg.auth_emailNotVerified));
     return;
   }
   const user = rowToUser(row);
@@ -112,6 +129,21 @@ authRouter.post("/forgot-password", (req, res, next) => {
     }
   }
   res.status(200).json({ message: msg.auth_forgotPasswordSuccess });
+});
+
+/** B74: GET /auth/verify-email?token=... — confirm email address. */
+authRouter.get("/verify-email", (req, res, next) => {
+  const token = (req.query.token ?? "").toString().trim();
+  if (!token) {
+    next(new AppError(400, msg.auth_verifyTokenInvalid));
+    return;
+  }
+  const userId = consumeEmailVerificationToken(token);
+  if (!userId) {
+    next(new AppError(400, msg.auth_verifyTokenInvalid));
+    return;
+  }
+  res.status(200).json({ message: msg.auth_verifySuccess });
 });
 
 /** B62: POST /auth/reset-password — set new password with token. Body: { token, newPassword }. */

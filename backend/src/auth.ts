@@ -27,6 +27,8 @@ export interface UserRow {
   password_hash: string;
   name: string;
   role: UserRole;
+  email_verified?: number | null;
+  email_verified_at?: string | null;
 }
 
 export interface User {
@@ -54,14 +56,17 @@ export function createUser(
   email: string,
   password: string,
   name: string,
-  role: UserRole
+  role: UserRole,
+  options?: { emailVerified?: boolean }
 ): User {
   const id = uuid();
   const password_hash = hashPassword(password);
+  const emailLower = email.toLowerCase();
+  const emailVerified = options?.emailVerified === false ? 0 : 1;
   db.prepare(
-    "INSERT INTO users (id, email, password_hash, name, role) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, email.toLowerCase(), password_hash, name, role);
-  return { id, email: email.toLowerCase(), name, role };
+    "INSERT INTO users (id, email, password_hash, name, role, email_verified) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(id, emailLower, password_hash, name, role, emailVerified);
+  return { id, email: emailLower, name, role };
 }
 
 export function findUserByEmail(email: string): UserRow | undefined {
@@ -126,6 +131,31 @@ export function consumePasswordResetToken(token: string): string | null {
     .get(token) as { user_id: string } | undefined;
   if (!row) return null;
   db.prepare("DELETE FROM password_reset_tokens WHERE token = ?").run(token);
+  return row.user_id;
+}
+
+/** B74: Create an email verification token for user, valid 24 hours. Returns the token. */
+export function createEmailVerificationToken(userId: string): string {
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  db.prepare(
+    "INSERT INTO email_verification_tokens (token, user_id, expires_at) VALUES (?, ?, ?)"
+  ).run(token, userId, expiresAt);
+  return token;
+}
+
+/** B74: If token valid and not expired, marks user as verified and deletes token. Returns userId or null. */
+export function consumeEmailVerificationToken(token: string): string | null {
+  const row = db
+    .prepare(
+      "SELECT user_id FROM email_verification_tokens WHERE token = ? AND expires_at > datetime('now')"
+    )
+    .get(token) as { user_id: string } | undefined;
+  if (!row) return null;
+  db.prepare(
+    "UPDATE users SET email_verified = 1, email_verified_at = datetime('now') WHERE id = ?"
+  ).run(row.user_id);
+  db.prepare("DELETE FROM email_verification_tokens WHERE token = ?").run(token);
   return row.user_id;
 }
 

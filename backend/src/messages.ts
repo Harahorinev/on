@@ -18,6 +18,7 @@ export const msg = {
   auth_registrationFailed: "Ошибка регистрации",
   auth_emailAndPasswordRequired: "Укажите email и пароль",
   auth_invalidEmailOrPassword: "Неверный email или пароль",
+  auth_emailNotVerified: "Подтвердите email, перейдя по ссылке из письма.",
 
   // Auth (middleware)
   auth_unauthorized: "Требуется авторизация",
@@ -33,6 +34,10 @@ export const msg = {
   auth_resetTokenInvalid: "Недействительная или просроченная ссылка сброса пароля.",
   auth_resetEmailRequired: "Укажите email",
   auth_resetTokenAndPasswordRequired: "Укажите токен сброса и новый пароль",
+
+  // B74: Email verification
+  auth_verifyTokenInvalid: "Недействительная или просроченная ссылка подтверждения email.",
+  auth_verifySuccess: "Email успешно подтверждён.",
 
   // Companies
   company_notFound: "Компания не найдена",

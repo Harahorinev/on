@@ -110,6 +110,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
   CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires ON password_reset_tokens(expires_at);
 
+  /* B74: Email verification tokens. Used to confirm user email ownership. */
+  CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user ON email_verification_tokens(user_id);
+  CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires ON email_verification_tokens(expires_at);
+
   CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id);
   CREATE INDEX IF NOT EXISTS idx_user_events_user ON user_events(user_id);
   CREATE INDEX IF NOT EXISTS idx_slots_company ON slots(company_id);
@@ -117,6 +127,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
   CREATE INDEX IF NOT EXISTS idx_directions_company ON directions(company_id);
 `);
+
+// B74: Email verification flags. Added via ALTER to avoid breaking existing DBs.
+try {
+  db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0;");
+} catch {
+  // ignore if column already exists
+}
+try {
+  db.exec("ALTER TABLE users ADD COLUMN email_verified_at TEXT;");
+} catch {
+  // ignore if column already exists
+}
 
 export function uuid() {
   return randomUUID();

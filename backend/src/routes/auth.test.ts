@@ -3,7 +3,7 @@ import request from "supertest";
 import express from "express";
 import { rateLimit } from "express-rate-limit";
 import { app } from "../index.js";
-import { createUser } from "../auth.js";
+import { createEmailVerificationToken, createUser } from "../auth.js";
 import { db } from "../db.js";
 import { authRouter } from "./auth.js";
 import { errorHandler } from "../errors.js";
@@ -120,6 +120,15 @@ describe("POST /auth/login", () => {
     expect(res.body.accessToken).toBeTruthy();
     expect(res.body.user).toMatchObject({ email: "login-ok@test.co", name: "Login User", role: "USER" });
   });
+
+  it("returns 403 when email not verified", async () => {
+    createUser("unverified@test.co", "pass123", "Unverified", "USER", { emailVerified: false });
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ email: "unverified@test.co", password: "pass123" });
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/подтвердите|email|почт/iu);
+  });
 });
 
 describe("POST /auth/forgot-password (B62)", () => {
@@ -220,6 +229,33 @@ describe("POST /auth/reset-password (B62)", () => {
       .send({ token: row!.token, newPassword: "another123" });
     expect(resReuse.status).toBe(400);
     expect(resReuse.body.message).toMatch(/Недействительн|просрочен/);
+  });
+});
+
+describe("GET /auth/verify-email (B74)", () => {
+  it("returns 400 when token invalid", async () => {
+    const res = await request(app).get("/auth/verify-email").query({ token: "invalid-token" });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/подтвержден/i);
+  });
+
+  it("returns 200 and marks user as verified when token valid", async () => {
+    createUser("verify-ok@test.co", "pass123", "Verify User", "USER", { emailVerified: false });
+    const row = db
+      .prepare("SELECT id FROM users WHERE email = ?")
+      .get("verify-ok@test.co") as { id: string } | undefined;
+    expect(row).toBeTruthy();
+    const token = createEmailVerificationToken(row!.id);
+
+    const res = await request(app).get("/auth/verify-email").query({ token });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/подтвержд/iu);
+
+    const loginRes = await request(app)
+      .post("/auth/login")
+      .send({ email: "verify-ok@test.co", password: "pass123" });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.accessToken).toBeTruthy();
   });
 });
 
