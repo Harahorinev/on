@@ -15,6 +15,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { ConfirmEmailPage } from './pages/ConfirmEmailPage';
 
 const USE_MF = import.meta.env.VITE_USE_MF === 'true';
 
@@ -104,6 +105,7 @@ export function AppRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/confirm-email" element={<ConfirmEmailPage />} />
       {ROUTES_WITH_REMOTE.map(({ path, remote: Remote, local: Local, protect }) => (
         <Route
           key={path}

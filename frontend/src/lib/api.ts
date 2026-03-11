@@ -179,6 +179,9 @@ export const authApi = {
   /** F77: Set new password with token from reset link. */
   resetPassword: (data: { token: string; newPassword: string }) =>
     api.post<unknown>('/auth/reset-password', data),
+  /** F75: Confirm email address with token from verification link. */
+  verifyEmail: (token: string) =>
+    api.get<{ message: string }>('/auth/verify-email', { params: { token } }),
 };
 
 export const companiesApi = {
