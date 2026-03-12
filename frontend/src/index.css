@@ -82,17 +82,31 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   margin: 0 0 var(--space-2);
   font-weight: 600;
   line-height: 1.3;
   color: var(--color-text);
 }
 
-h1 { font-size: var(--text-2xl); }
-h2 { font-size: var(--text-xl); }
-h3 { font-size: var(--text-lg); }
-h4 { font-size: var(--text-base); }
+h1 {
+  font-size: var(--text-2xl);
+}
+
+h2 {
+  font-size: var(--text-xl);
+}
+
+h3 {
+  font-size: var(--text-lg);
+}
+
+h4 {
+  font-size: var(--text-base);
+}
 
 p {
   margin: 0 0 var(--space-2);
@@ -127,7 +141,9 @@ button:disabled {
   opacity: 0.65;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -280,15 +296,16 @@ input, textarea, select {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding-bottom: var(--space-2);
 }
 
 .chat-messages {
-  border: 1px solid var(--blue-border);
+  border: none;
   border-radius: var(--radius-md);
   padding: var(--space-3);
   background: var(--blue-50);
-  max-height: 260px;
-  overflow-y: auto;
+  /* Высоту ограничиваем через общий контейнер, здесь даём расти свободно. */
+  overflow-y: visible;
 }
 
 .chat-message {
@@ -309,7 +326,7 @@ input, textarea, select {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  background: #ffffff;
+  background: var(--blue-card);
 }
 
 .chat-message--user .chat-message-bubble {
@@ -333,21 +350,36 @@ input, textarea, select {
   align-items: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-3);
+  margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  background: var(--color-bg);
+  border-radius: 2px;
+  border: 1px solid var(--blue-border);
 }
 
 .chat-input {
   flex: 1;
-  min-height: 2.5rem;
+  min-height: 1.75rem;
   max-height: 6rem;
-  resize: vertical;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--blue-border);
+  resize: none;
+  padding: 0;
+  border-radius: 2px;
+  border: none;
+  outline: none;
+  background: transparent;
 }
 
 .chat-send-btn {
-  align-self: stretch;
+  align-self: flex-end;
   white-space: nowrap;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .chat-fab {
@@ -356,7 +388,7 @@ input, textarea, select {
   bottom: var(--space-4);
   width: 3rem;
   height: 3rem;
-  border-radius: 999px;
+  border-radius: 50%;
   border: none;
   background: var(--blue-600);
   color: #ffffff;
@@ -378,7 +410,7 @@ input, textarea, select {
   bottom: var(--space-6);
   width: min(380px, 100% - 2 * var(--space-4));
   max-height: 70vh;
-  background: #ffffff;
+  background: var(--blue-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--blue-border-light);
@@ -409,8 +441,10 @@ input, textarea, select {
 }
 
 .chat-drawer-body {
-  padding: var(--space-3) var(--space-4) var(--space-4);
-  overflow: hidden;
+  padding: var(--space-2) var(--space-4) var(--space-2);
+  /* Делаем область прокрутки для сообщений + инпута,
+     чтобы поле ввода не исчезало при уменьшении высоты окна (например, с DevTools). */
+  overflow-y: auto;
 }
 
 /* ==========================================================================
@@ -452,6 +486,17 @@ input, textarea, select {
 
 .btn-danger:hover:not(:disabled) {
   background: var(--color-error-hover);
+}
+
+/* Chat send button overrides generic .btn styles */
+.btn.chat-send-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ==========================================================================
@@ -780,15 +825,41 @@ input, textarea, select {
    ========================================================================== */
 
 /* Spacing */
-.mt-0 { margin-top: 0; }
-.mb-0 { margin-bottom: 0; }
-.m-0 { margin: 0; }
-.mb-1 { margin-bottom: var(--space-4); }
-.mb-half { margin-bottom: var(--space-2); }
-.mt-1 { margin-top: var(--space-4); }
-.mt-half { margin-top: var(--space-2); }
-.ml-half { margin-left: var(--space-2); }
-.ml-1 { margin-left: var(--space-4); }
+.mt-0 {
+  margin-top: 0;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.m-0 {
+  margin: 0;
+}
+
+.mb-1 {
+  margin-bottom: var(--space-4);
+}
+
+.mb-half {
+  margin-bottom: var(--space-2);
+}
+
+.mt-1 {
+  margin-top: var(--space-4);
+}
+
+.mt-half {
+  margin-top: var(--space-2);
+}
+
+.ml-half {
+  margin-left: var(--space-2);
+}
+
+.ml-1 {
+  margin-left: var(--space-4);
+}
 
 /* Text */
 .text-muted {
@@ -850,4 +921,16 @@ input, textarea, select {
   background: var(--color-success-bg);
   border: 1px solid var(--color-success-border);
   color: var(--color-success);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

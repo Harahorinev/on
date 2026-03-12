@@ -28,7 +28,7 @@ export function ChatWidget() {
             </button>
           </div>
           <div className="chat-drawer-body">
-            <ChatPage />
+            <ChatPage variant="widget" />
           </div>
         </div>
       )}
