@@ -1,5 +1,6 @@
 import { db, uuid } from "./db.js";
 import { logger } from "./logger.js";
+import { incMetric, recordSchedulerRun } from "./monitoring.js";
 import { sendEmail } from "./notification.js";
 import { type BookingEmailType, getBookingEmail, getBookingReminderEmail } from "./templates.js";
 
@@ -79,10 +80,20 @@ export async function sendBookingEmailNotification(
   bookingId: string,
   type: BookingEmailType
 ): Promise<boolean> {
+  incMetric("bookingEmailAttempts");
   const row = getBookingNotificationRow(bookingId);
-  if (!row) return false;
-  if (!isNotifyEmailEnabled(row.user_id)) return false;
-  if (wasEmailNotificationSent(row.user_id, bookingId, type)) return false;
+  if (!row) {
+    incMetric("bookingEmailSkippedNoBooking");
+    return false;
+  }
+  if (!isNotifyEmailEnabled(row.user_id)) {
+    incMetric("bookingEmailSkippedDisabled");
+    return false;
+  }
+  if (wasEmailNotificationSent(row.user_id, bookingId, type)) {
+    incMetric("bookingEmailSkippedDuplicate");
+    return false;
+  }
 
   const message = getBookingEmail(type, {
     companyName: row.company_name,
@@ -98,11 +109,17 @@ export async function sendBookingEmailNotification(
     text: message.text,
     html: message.html,
   });
-  if (sent) markEmailNotificationSent(row.user_id, bookingId, type);
+  if (sent) {
+    incMetric("bookingEmailSent");
+    markEmailNotificationSent(row.user_id, bookingId, type);
+  } else {
+    incMetric("bookingEmailFailed");
+  }
   return sent;
 }
 
 export async function sendUpcomingBookingReminders(now = new Date()): Promise<number> {
+  incMetric("reminderSweeps");
   let sentCount = 0;
   for (const minutesBefore of REMINDER_OFFSETS_MINUTES) {
     const upperBound = new Date(now.getTime() + minutesBefore * MINUTE_MS);
@@ -117,13 +134,23 @@ export async function sendUpcomingBookingReminders(now = new Date()): Promise<nu
             AND s.start_at <= ?`
       )
       .all(lowerBound.toISOString(), upperBound.toISOString()) as Array<{ booking_id: string }>;
+    incMetric("reminderCandidates", rows.length);
 
     for (const row of rows) {
       const details = getBookingNotificationRow(row.booking_id);
-      if (!details) continue;
-      if (!isNotifyEmailEnabled(details.user_id)) continue;
+      if (!details) {
+        incMetric("reminderSkippedNoBooking");
+        continue;
+      }
+      if (!isNotifyEmailEnabled(details.user_id)) {
+        incMetric("reminderSkippedDisabled");
+        continue;
+      }
       const reminderType = `booking_reminder_${minutesBefore}m` as const;
-      if (wasEmailNotificationSent(details.user_id, details.booking_id, reminderType)) continue;
+      if (wasEmailNotificationSent(details.user_id, details.booking_id, reminderType)) {
+        incMetric("reminderSkippedDuplicate");
+        continue;
+      }
 
       const message = getBookingReminderEmail({
         companyName: details.company_name,
@@ -139,8 +166,12 @@ export async function sendUpcomingBookingReminders(now = new Date()): Promise<nu
         text: message.text,
         html: message.html,
       });
-      if (!sent) continue;
+      if (!sent) {
+        incMetric("reminderFailed");
+        continue;
+      }
       markEmailNotificationSent(details.user_id, details.booking_id, reminderType);
+      incMetric("reminderSent");
       sentCount += 1;
     }
   }
@@ -152,10 +183,22 @@ export function startBookingReminderScheduler(): void {
   if (!Number.isFinite(REMINDER_INTERVAL_MS) || REMINDER_INTERVAL_MS <= 0) return;
 
   const run = async () => {
+    const startedAt = Date.now();
     try {
       const sent = await sendUpcomingBookingReminders();
-      if (sent > 0) logger.info({ sent }, "Booking reminder emails sent");
+      const durationMs = Date.now() - startedAt;
+      recordSchedulerRun({ sent, durationMs });
+      logger.info(
+        { sent, durationMs, offsetsMinutes: REMINDER_OFFSETS_MINUTES, intervalMs: REMINDER_INTERVAL_MS },
+        "Booking reminder scheduler run completed"
+      );
     } catch (err) {
+      const durationMs = Date.now() - startedAt;
+      recordSchedulerRun({
+        sent: 0,
+        durationMs,
+        error: err instanceof Error ? err.message : "unknown error",
+      });
       logger.error({ err }, "Booking reminder scheduler failed");
     }
   };

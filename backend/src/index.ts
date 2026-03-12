@@ -8,6 +8,8 @@ import { startBookingReminderScheduler } from "./emailNotifications.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
 import { logger } from "./logger.js";
 import { msg } from "./messages.js";
+import { getMonitoringSnapshot } from "./monitoring.js";
+import { db } from "./db.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
 import { chatRouter } from "./routes/chat.js";
@@ -32,7 +34,20 @@ app.use(
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, timestamp: new Date().toISOString() });
+  let dbOk = true;
+  try {
+    db.prepare("SELECT 1 as ok").get();
+  } catch {
+    dbOk = false;
+  }
+  const monitoring = getMonitoringSnapshot();
+  const ok = dbOk;
+  res.status(ok ? 200 : 503).json({
+    ok,
+    timestamp: new Date().toISOString(),
+    db: { ok: dbOk },
+    monitoring,
+  });
 });
 
 const authLimiter = rateLimit({
