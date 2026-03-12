@@ -243,3 +243,72 @@ describe("GET /companies/:id/export", () => {
     expect(res.text).toContain(`UID:${slotId}@on`);
   });
 });
+
+describe("GET /companies/:id/bookings", () => {
+  let ownerToken: string;
+  let otherCompanyToken: string;
+  let userToken: string;
+  let companyId: string;
+
+  beforeAll(async () => {
+    const owner = createUser("comp-bookings-owner@test.co", "123", "Owner", "COMPANY");
+    ownerToken = signToken(owner);
+    const otherCompany = createUser("comp-bookings-other@test.co", "123", "Other", "COMPANY");
+    otherCompanyToken = signToken(otherCompany);
+    const bookingUser = createUser("comp-bookings-user@test.co", "123", "User", "USER");
+    userToken = signToken(bookingUser);
+
+    const companyRes = await request(app)
+      .post("/companies")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Bookings Co" });
+    companyId = companyRes.body.id;
+
+    const start = new Date(Date.now() + 3600000).toISOString();
+    const end = new Date(Date.now() + 7200000).toISOString();
+    const slotRes = await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ startAt: start, endAt: end, capacity: 2, title: "Visit" });
+
+    await request(app)
+      .post(`/slots/${slotRes.body.id}/bookings`)
+      .set("Authorization", `Bearer ${userToken}`);
+  });
+
+  it("returns 401 without token", async () => {
+    const res = await request(app).get(`/companies/${companyId}/bookings`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 for unknown company", async () => {
+    const res = await request(app)
+      .get("/companies/unknown-company-id/bookings")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 for non-owner", async () => {
+    const res = await request(app)
+      .get(`/companies/${companyId}/bookings`)
+      .set("Authorization", `Bearer ${otherCompanyToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns bookings with user and slot info for owner", async () => {
+    const res = await request(app)
+      .get(`/companies/${companyId}/bookings`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.body[0]).toMatchObject({
+      id: expect.any(String),
+      slotId: expect.any(String),
+      userId: expect.any(String),
+      status: "CONFIRMED",
+      user: { id: expect.any(String), email: expect.any(String), name: expect.any(String) },
+      slot: { id: expect.any(String), startAt: expect.any(String), endAt: expect.any(String) },
+    });
+  });
+});

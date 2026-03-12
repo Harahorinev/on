@@ -114,6 +114,75 @@ companiesRouter.get("/:id", (req, res, next) => {
   });
 });
 
+companiesRouter.get("/:id/bookings", authMiddleware, (req, res, next) => {
+  const company = db
+    .prepare("SELECT id, owner_id FROM companies WHERE id = ?")
+    .get(req.params.id) as { id: string; owner_id: string } | undefined;
+  if (!company) {
+    next(new AppError(404, msg.company_notFound));
+    return;
+  }
+  if (company.owner_id !== req.userId) {
+    next(new AppError(403, msg.forbidden));
+    return;
+  }
+
+  const rows = db
+    .prepare(
+      `SELECT b.id as booking_id, b.slot_id, b.user_id, b.status as booking_status, b.created_at as booking_created_at,
+              s.id as s_id, s.start_at, s.end_at, s.status as slot_status, s.capacity, s.title, s.description, s.location,
+              u.id as u_id, u.email as u_email, u.name as u_name
+       FROM bookings b
+       JOIN slots s ON s.id = b.slot_id
+       JOIN users u ON u.id = b.user_id
+       WHERE s.company_id = ?
+       ORDER BY s.start_at DESC, b.created_at DESC`
+    )
+    .all(req.params.id) as Array<{
+    booking_id: string;
+    slot_id: string;
+    user_id: string;
+    booking_status: string;
+    booking_created_at: string;
+    s_id: string;
+    start_at: string;
+    end_at: string;
+    slot_status: string;
+    capacity: number;
+    title: string | null;
+    description: string | null;
+    location: string | null;
+    u_id: string;
+    u_email: string;
+    u_name: string;
+  }>;
+
+  res.json(
+    rows.map((r) => ({
+      id: r.booking_id,
+      slotId: r.slot_id,
+      userId: r.user_id,
+      status: r.booking_status,
+      createdAt: r.booking_created_at,
+      user: {
+        id: r.u_id,
+        email: r.u_email,
+        name: r.u_name,
+      },
+      slot: {
+        id: r.s_id,
+        startAt: r.start_at,
+        endAt: r.end_at,
+        status: r.slot_status,
+        capacity: r.capacity,
+        title: r.title ?? undefined,
+        description: r.description ?? undefined,
+        location: r.location ?? undefined,
+      },
+    }))
+  );
+});
+
 companiesRouter.get("/:id/export", authMiddleware, (req, res, next) => {
   const { id: companyId } = req.params;
   const formatRaw = String(req.query.format ?? "csv").toLowerCase();
