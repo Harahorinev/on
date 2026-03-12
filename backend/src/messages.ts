@@ -46,6 +46,7 @@ export const msg = {
   company_nameNonEmpty: "Название не должно быть пустым",
   company_alreadyHaveCompany: "У вас уже есть компания",
   company_timezoneMax: (max: number) => `Часовой пояс — не более ${max} символов`,
+  company_exportFormatInvalid: "Формат экспорта должен быть csv или ical",
 
   // Directions
   direction_notFound: "Направление не найдено",

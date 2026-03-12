@@ -176,3 +176,70 @@ describe("GET /companies/:id and PATCH /companies/:id", () => {
     expect(res.body.description).toBe("New desc");
   });
 });
+
+describe("GET /companies/:id/export", () => {
+  let ownerToken: string;
+  let otherToken: string;
+  let companyId: string;
+  let slotId: string;
+
+  beforeAll(async () => {
+    const owner = createUser("comp-export-owner@test.co", "123", "Owner", "COMPANY");
+    ownerToken = signToken(owner);
+    const other = createUser("comp-export-other@test.co", "123", "Other", "COMPANY");
+    otherToken = signToken(other);
+    const create = await request(app)
+      .post("/companies")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Export Co" });
+    companyId = create.body.id;
+
+    const start = new Date(Date.now() + 3600000).toISOString();
+    const end = new Date(Date.now() + 7200000).toISOString();
+    const slotRes = await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ startAt: start, endAt: end, capacity: 3, title: "Consultation", location: "Room 1" });
+    slotId = slotRes.body.id;
+  });
+
+  it("returns 401 without token", async () => {
+    const res = await request(app).get(`/companies/${companyId}/export?format=csv`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for non-owner", async () => {
+    const res = await request(app)
+      .get(`/companies/${companyId}/export?format=csv`)
+      .set("Authorization", `Bearer ${otherToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 for unknown format", async () => {
+    const res = await request(app)
+      .get(`/companies/${companyId}/export?format=pdf`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns CSV export", async () => {
+    const res = await request(app)
+      .get(`/companies/${companyId}/export?format=csv`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/csv");
+    expect(res.text).toContain("slot_id,start_at,end_at,status,capacity,title,location,confirmed_bookings,cancelled_bookings");
+    expect(res.text).toContain(slotId);
+  });
+
+  it("returns iCal export", async () => {
+    const res = await request(app)
+      .get(`/companies/${companyId}/export?format=ical`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/calendar");
+    expect(res.text).toContain("BEGIN:VCALENDAR");
+    expect(res.text).toContain("BEGIN:VEVENT");
+    expect(res.text).toContain(`UID:${slotId}@on`);
+  });
+});

@@ -8,6 +8,27 @@ import type { CompanyRowWithOwner } from "../db-types.js";
 
 export const companiesRouter = Router();
 
+function csvEscape(value: unknown): string {
+  if (value == null) return "";
+  const s = String(value);
+  if (s.includes('"') || s.includes(",") || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function icalTextEscape(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
+function toIcalDate(iso: string): string {
+  return iso.replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
 companiesRouter.get("/", (_req, res) => {
   const rows = db
     .prepare(
@@ -91,6 +112,133 @@ companiesRouter.get("/:id", (req, res, next) => {
     timezone: row.timezone,
     owner: { id: row.owner_id, email: row.owner_email, name: row.owner_name },
   });
+});
+
+companiesRouter.get("/:id/export", authMiddleware, (req, res, next) => {
+  const { id: companyId } = req.params;
+  const formatRaw = String(req.query.format ?? "csv").toLowerCase();
+  if (formatRaw !== "csv" && formatRaw !== "ical") {
+    next(new AppError(400, msg.company_exportFormatInvalid));
+    return;
+  }
+
+  const company = db
+    .prepare("SELECT id, name, owner_id FROM companies WHERE id = ?")
+    .get(companyId) as { id: string; name: string; owner_id: string } | undefined;
+  if (!company) {
+    next(new AppError(404, msg.company_notFound));
+    return;
+  }
+  if (company.owner_id !== req.userId) {
+    next(new AppError(403, msg.forbidden));
+    return;
+  }
+
+  const { dateFrom, dateTo } = req.query as { dateFrom?: string; dateTo?: string };
+  let where = "WHERE s.company_id = ?";
+  const params: Array<string | number> = [companyId];
+  if (dateFrom) {
+    where += " AND s.start_at >= ?";
+    params.push(dateFrom);
+  }
+  if (dateTo) {
+    where += " AND s.end_at <= ?";
+    params.push(dateTo);
+  }
+  const rows = db
+    .prepare(
+      `SELECT s.id, s.start_at, s.end_at, s.status, s.capacity, s.title, s.location,
+              SUM(CASE WHEN b.status = 'CONFIRMED' THEN 1 ELSE 0 END) as confirmed_bookings,
+              SUM(CASE WHEN b.status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled_bookings
+         FROM slots s
+         LEFT JOIN bookings b ON b.slot_id = s.id
+         ${where}
+        GROUP BY s.id
+        ORDER BY s.start_at`
+    )
+    .all(...params) as Array<{
+    id: string;
+    start_at: string;
+    end_at: string;
+    status: string;
+    capacity: number;
+    title: string | null;
+    location: string | null;
+    confirmed_bookings: number | null;
+    cancelled_bookings: number | null;
+  }>;
+
+  const safeCompany = company.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (formatRaw === "csv") {
+    const header = [
+      "slot_id",
+      "start_at",
+      "end_at",
+      "status",
+      "capacity",
+      "title",
+      "location",
+      "confirmed_bookings",
+      "cancelled_bookings",
+    ].join(",");
+    const lines = rows.map((r) =>
+      [
+        csvEscape(r.id),
+        csvEscape(r.start_at),
+        csvEscape(r.end_at),
+        csvEscape(r.status),
+        csvEscape(r.capacity),
+        csvEscape(r.title ?? ""),
+        csvEscape(r.location ?? ""),
+        csvEscape(r.confirmed_bookings ?? 0),
+        csvEscape(r.cancelled_bookings ?? 0),
+      ].join(",")
+    );
+    const payload = [header, ...lines].join("\n");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeCompany}-schedule.csv"`);
+    res.status(200).send(payload);
+    return;
+  }
+
+  const dtStamp = toIcalDate(new Date().toISOString());
+  const events = rows
+    .map((r) => {
+      const summary = icalTextEscape(r.title ?? `Slot: ${company.name}`);
+      const description = icalTextEscape(
+        `Status: ${r.status}; Capacity: ${r.capacity}; Confirmed bookings: ${r.confirmed_bookings ?? 0}`
+      );
+      const location = r.location ? `\nLOCATION:${icalTextEscape(r.location)}` : "";
+      return [
+        "BEGIN:VEVENT",
+        `UID:${r.id}@on`,
+        `DTSTAMP:${dtStamp}`,
+        `DTSTART:${toIcalDate(r.start_at)}`,
+        `DTEND:${toIcalDate(r.end_at)}`,
+        `SUMMARY:${summary}`,
+        `DESCRIPTION:${description}`,
+        location ? location.trimStart() : null,
+        "END:VEVENT",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n");
+
+  const payload = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//On//Schedule Export//EN",
+    "CALSCALE:GREGORIAN",
+    events,
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${safeCompany}-schedule.ics"`);
+  res.status(200).send(payload);
 });
 
 companiesRouter.post("/", authMiddleware, (req, res, next) => {
