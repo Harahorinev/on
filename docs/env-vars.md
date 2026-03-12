@@ -24,6 +24,7 @@
 | `OPENAI_BASE_URL` | опционально | Базовый URL OpenAI-compatible API | `https://api.openai.com/v1` |
 | `AI_TIMEOUT_MS` | опционально | Таймаут AI-запроса в мс | `15000` |
 | `BOOKING_REMINDER_INTERVAL_MS` | опционально | Интервал проверки напоминаний о записи (B84) | `900000` |
+| `BOOKING_REMINDER_OFFSETS_MINUTES` | опционально | Смещения напоминаний в минутах через запятую (B40) | `1440,60` |
 
 ## Frontend (`frontend/.env`)
 

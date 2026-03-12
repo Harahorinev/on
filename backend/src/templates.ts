@@ -11,6 +11,7 @@ type BookingEmailParams = {
   title?: string;
   location?: string;
 };
+type BookingReminderEmailParams = BookingEmailParams & { minutesBefore: number };
 
 const templates: Record<
   Locale,
@@ -23,7 +24,7 @@ const templates: Record<
     };
     bookingCreated: (params: BookingEmailParams) => { subject: string; text: string; html: string };
     bookingCancelled: (params: BookingEmailParams) => { subject: string; text: string; html: string };
-    bookingReminder24h: (params: BookingEmailParams) => { subject: string; text: string; html: string };
+    bookingReminder: (params: BookingReminderEmailParams) => { subject: string; text: string; html: string };
   }
 > = {
   ru: {
@@ -133,12 +134,12 @@ const templates: Record<
         "<p>С уважением,<br/>Команда On</p>",
       ].join(""),
     }),
-    bookingReminder24h: ({ companyName, startAt, endAt, title, location }) => ({
-      subject: "On — напоминание о записи (24 часа)",
+    bookingReminder: ({ companyName, startAt, endAt, title, location, minutesBefore }) => ({
+      subject: `On — напоминание о записи (за ${minutesBefore} мин)`,
       text: [
         "Здравствуйте!",
         "",
-        "Напоминаем: до вашей записи осталось менее 24 часов.",
+        `Напоминаем: до вашей записи осталось около ${minutesBefore} минут.`,
         `Компания: ${companyName}`,
         title ? `Услуга: ${title}` : null,
         `Начало: ${startAt}`,
@@ -270,12 +271,12 @@ const templates: Record<
         "<p>Best regards,<br/>On Team</p>",
       ].join(""),
     }),
-    bookingReminder24h: ({ companyName, startAt, endAt, title, location }) => ({
-      subject: "On — booking reminder (24h)",
+    bookingReminder: ({ companyName, startAt, endAt, title, location, minutesBefore }) => ({
+      subject: `On — booking reminder (${minutesBefore} min before)`,
       text: [
         "Hello,",
         "",
-        "Reminder: your booking starts in less than 24 hours.",
+        `Reminder: your booking starts in about ${minutesBefore} minutes.`,
         `Company: ${companyName}`,
         title ? `Service: ${title}` : null,
         `Start: ${startAt}`,
@@ -318,7 +319,7 @@ export function getEmailVerificationEmail(
   return t.emailVerification({ verifyLink });
 }
 
-export type BookingEmailType = "booking_created" | "booking_cancelled" | "booking_reminder_24h";
+export type BookingEmailType = "booking_created" | "booking_cancelled";
 
 export function getBookingEmail(
   type: BookingEmailType,
@@ -327,6 +328,13 @@ export function getBookingEmail(
 ): { subject: string; text: string; html: string } {
   const t = templates[locale] ?? templates.ru;
   if (type === "booking_created") return t.bookingCreated(params);
-  if (type === "booking_cancelled") return t.bookingCancelled(params);
-  return t.bookingReminder24h(params);
+  return t.bookingCancelled(params);
+}
+
+export function getBookingReminderEmail(
+  params: BookingReminderEmailParams,
+  locale: Locale = "ru"
+): { subject: string; text: string; html: string } {
+  const t = templates[locale] ?? templates.ru;
+  return t.bookingReminder(params);
 }

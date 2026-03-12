@@ -1,7 +1,7 @@
 import { db, uuid } from "./db.js";
 import { logger } from "./logger.js";
 import { sendEmail } from "./notification.js";
-import { type BookingEmailType, getBookingEmail } from "./templates.js";
+import { type BookingEmailType, getBookingEmail, getBookingReminderEmail } from "./templates.js";
 
 type UserPreferencesRow = { preferences: string };
 type BookingNotificationRow = {
@@ -16,7 +16,21 @@ type BookingNotificationRow = {
 };
 
 const REMINDER_INTERVAL_MS = Number(process.env.BOOKING_REMINDER_INTERVAL_MS ?? 15 * 60 * 1000);
+const REMINDER_OFFSETS_MINUTES_RAW = process.env.BOOKING_REMINDER_OFFSETS_MINUTES ?? "1440";
 const ENTITY_TYPE_BOOKING = "booking";
+const MINUTE_MS = 60 * 1000;
+
+type BookingEmailLogType = BookingEmailType | `booking_reminder_${number}m`;
+
+function parseReminderOffsetsMinutes(): number[] {
+  const parsed = REMINDER_OFFSETS_MINUTES_RAW
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0) as number[];
+  if (parsed.length === 0) return [1440];
+  return [...new Set(parsed)].sort((a, b) => b - a);
+}
+const REMINDER_OFFSETS_MINUTES = parseReminderOffsetsMinutes();
 
 function isNotifyEmailEnabled(userId: string): boolean {
   const row = db
@@ -45,7 +59,7 @@ function getBookingNotificationRow(bookingId: string): BookingNotificationRow | 
     .get(bookingId) as BookingNotificationRow | undefined;
 }
 
-function wasEmailNotificationSent(userId: string, bookingId: string, type: BookingEmailType): boolean {
+function wasEmailNotificationSent(userId: string, bookingId: string, type: BookingEmailLogType): boolean {
   const row = db
     .prepare(
       "SELECT id FROM email_notification_logs WHERE user_id = ? AND entity_type = ? AND entity_id = ? AND type = ?"
@@ -54,7 +68,7 @@ function wasEmailNotificationSent(userId: string, bookingId: string, type: Booki
   return Boolean(row);
 }
 
-function markEmailNotificationSent(userId: string, bookingId: string, type: BookingEmailType): void {
+function markEmailNotificationSent(userId: string, bookingId: string, type: BookingEmailLogType): void {
   db.prepare(
     `INSERT OR IGNORE INTO email_notification_logs (id, user_id, entity_type, entity_id, type)
      VALUES (?, ?, ?, ?, ?)`
@@ -89,23 +103,46 @@ export async function sendBookingEmailNotification(
 }
 
 export async function sendUpcomingBookingReminders(now = new Date()): Promise<number> {
-  const nowIso = now.toISOString();
-  const next24hIso = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
-  const rows = db
-    .prepare(
-      `SELECT b.id as booking_id
-         FROM bookings b
-         JOIN slots s ON s.id = b.slot_id
-        WHERE b.status = 'CONFIRMED'
-          AND s.start_at > ?
-          AND s.start_at <= ?`
-    )
-    .all(nowIso, next24hIso) as Array<{ booking_id: string }>;
-
   let sentCount = 0;
-  for (const row of rows) {
-    const sent = await sendBookingEmailNotification(row.booking_id, "booking_reminder_24h");
-    if (sent) sentCount += 1;
+  for (const minutesBefore of REMINDER_OFFSETS_MINUTES) {
+    const upperBound = new Date(now.getTime() + minutesBefore * MINUTE_MS);
+    const lowerBound = new Date(upperBound.getTime() - REMINDER_INTERVAL_MS);
+    const rows = db
+      .prepare(
+        `SELECT b.id as booking_id
+           FROM bookings b
+           JOIN slots s ON s.id = b.slot_id
+          WHERE b.status = 'CONFIRMED'
+            AND s.start_at > ?
+            AND s.start_at <= ?`
+      )
+      .all(lowerBound.toISOString(), upperBound.toISOString()) as Array<{ booking_id: string }>;
+
+    for (const row of rows) {
+      const details = getBookingNotificationRow(row.booking_id);
+      if (!details) continue;
+      if (!isNotifyEmailEnabled(details.user_id)) continue;
+      const reminderType = `booking_reminder_${minutesBefore}m` as const;
+      if (wasEmailNotificationSent(details.user_id, details.booking_id, reminderType)) continue;
+
+      const message = getBookingReminderEmail({
+        companyName: details.company_name,
+        startAt: details.start_at,
+        endAt: details.end_at,
+        title: details.title ?? undefined,
+        location: details.location ?? undefined,
+        minutesBefore,
+      });
+      const sent = await sendEmail({
+        to: details.user_email,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+      });
+      if (!sent) continue;
+      markEmailNotificationSent(details.user_id, details.booking_id, reminderType);
+      sentCount += 1;
+    }
   }
   return sentCount;
 }

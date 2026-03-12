@@ -42,7 +42,7 @@ function createBookingFixture(params: { notifyEmail: boolean; startsInMs: number
   return { bookingId };
 }
 
-describe("email notifications (B84)", () => {
+describe("email notifications (B84/B40)", () => {
   beforeEach(() => {
     vi.mocked(sendEmail).mockClear();
     db.prepare("DELETE FROM email_notification_logs").run();
@@ -62,7 +62,7 @@ describe("email notifications (B84)", () => {
 
   it("sends upcoming reminder once per booking", async () => {
     const baseNow = Date.now();
-    createBookingFixture({ notifyEmail: true, startsInMs: 47 * 60 * 60 * 1000 });
+    createBookingFixture({ notifyEmail: true, startsInMs: (48 * 60 - 5) * 60 * 1000 });
 
     const sweepTime = new Date(baseNow + 24 * 60 * 60 * 1000);
     const firstRun = await sendUpcomingBookingReminders(sweepTime);
