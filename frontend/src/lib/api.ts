@@ -192,6 +192,8 @@ export const companiesApi = {
     api.post<Company>('/companies', data),
   update: (id: string, data: { name?: string; description?: string; timezone?: string }) =>
     api.patch<Company>(`/companies/${id}`, data),
+  exportScheduleCsv: (id: string, params?: { dateFrom?: string; dateTo?: string }) =>
+    api.get<Blob>(`/companies/${id}/export`, { params: { format: 'csv', ...params }, responseType: 'blob' }),
 };
 
 export const slotsApi = {

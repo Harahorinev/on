@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { companiesApi, slotsApi } from '../lib/api';
+import { companiesApi, getApiErrorMessage, slotsApi } from '../lib/api';
 import type { Company, ScheduleSlot, SlotStatus } from '../lib/api';
 import { CreateCompanyForm } from '../components/CreateCompanyForm';
 import { CreateSlotForm } from '../components/CreateSlotForm';
@@ -19,6 +19,7 @@ export function CompanyPage() {
   const [error, setError] = useState('');
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [showSlotForm, setShowSlotForm] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -40,8 +41,32 @@ export function CompanyPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => load(), [load]);
+  useEffect(() => {
+    if (user?.role !== 'COMPANY') return;
+    void load();
+  }, [load, user?.role]);
+
+  const handleExportCsv = async () => {
+    if (!company) return;
+    setError('');
+    setExportLoading(true);
+    try {
+      const response = await companiesApi.exportScheduleCsv(company.id);
+      const blobUrl = window.URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      const safeCompany = company.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.download = `${safeCompany}-schedule.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Не удалось экспортировать CSV'));
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   if (user?.role !== 'COMPANY') {
     return <p>Доступ только для компании.</p>;
@@ -86,9 +111,14 @@ export function CompanyPage() {
           onCancel={() => setShowSlotForm(false)}
         />
       ) : (
-        <button type="button" className="btn btn-primary mb-1" onClick={() => setShowSlotForm(true)}>
-          Добавить слот
-        </button>
+        <div className="row mb-1">
+          <button type="button" className="btn btn-primary" onClick={() => setShowSlotForm(true)}>
+            Добавить слот
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={handleExportCsv} disabled={exportLoading}>
+            {exportLoading ? 'Экспорт…' : 'Экспорт CSV'}
+          </button>
+        </div>
       )}
       <div className="stack">
         {slots.map((slot) => {
