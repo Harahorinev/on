@@ -47,6 +47,26 @@ VITE_API_URL=https://твой-домен.com/api
 
 Чтобы отправлять письма сброса пароля, на сервере в окружении бэкенда задай `FRONTEND_URL` и SMTP-переменные. Подробно: **[docs/email-setup.md](email-setup.md)**.
 
+### 7. Бэкапы SQLite (B34)
+
+На сервере можно запускать резервное копирование SQLite командой:
+
+```bash
+cd /var/www/on/backend
+npm run backup
+```
+
+Полезные переменные окружения бэкенда:
+
+- `BACKUP_DIR` — папка для бэкапов (по умолчанию `./backups`).
+- `BACKUP_RETENTION_DAYS` — срок хранения бэкапов в днях (по умолчанию `7`).
+
+Пример `crontab` (ежедневно в 03:00):
+
+```bash
+0 3 * * * cd /var/www/on/backend && /usr/bin/npm run backup >> /var/log/on-backup.log 2>&1
+```
+
 ---
 
 ## Как это работает
