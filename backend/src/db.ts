@@ -152,6 +152,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user ON email_verification_tokens(user_id);
   CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires ON email_verification_tokens(expires_at);
 
+  /* B84: Generic log of sent email notifications (extensible by type/entity/channel use-cases). */
+  CREATE TABLE IF NOT EXISTS email_notification_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, entity_type, entity_id, type)
+  );
+  CREATE INDEX IF NOT EXISTS idx_email_notification_logs_entity ON email_notification_logs(entity_type, entity_id, type);
+  CREATE INDEX IF NOT EXISTS idx_email_notification_logs_user ON email_notification_logs(user_id);
+
   CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id);
   CREATE INDEX IF NOT EXISTS idx_user_events_user ON user_events(user_id);
   CREATE INDEX IF NOT EXISTS idx_slots_company ON slots(company_id);

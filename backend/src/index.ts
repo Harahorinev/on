@@ -4,6 +4,7 @@ import express from "express";
 import { rateLimit } from "express-rate-limit";
 import "./db.js";
 import { authMiddleware } from "./auth.js";
+import { startBookingReminderScheduler } from "./emailNotifications.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
 import { logger } from "./logger.js";
 import { msg } from "./messages.js";
@@ -59,6 +60,7 @@ app.use(errorHandler);
 export { app };
 
 if (process.env.NODE_ENV !== "test") {
+  startBookingReminderScheduler();
   app.listen(port, () => {
     logger.info({ port }, "Backend listening");
   });

@@ -1,8 +1,10 @@
 import express from "express";
 import { Router } from "express";
 import { db, uuid } from "../db.js";
+import { sendBookingEmailNotification } from "../emailNotifications.js";
 import { authMiddleware } from "../auth.js";
 import { AppError } from "../errors.js";
+import { logger } from "../logger.js";
 import type { BookingJoinedRow, BookingRow, SlotRow } from "../db-types.js";
 import { msg } from "../messages.js";
 
@@ -150,6 +152,9 @@ export function createBookingForSlot(req: express.Request, res: express.Response
       company: c,
     })
   );
+  void sendBookingEmailNotification(bookingId, "booking_created").catch((err) => {
+    logger.error({ err, bookingId }, "Failed to send booking created email notification");
+  });
 }
 
 bookingsRouter.delete("/:id", authMiddleware, (req, res, next) => {
@@ -167,4 +172,7 @@ bookingsRouter.delete("/:id", authMiddleware, (req, res, next) => {
   const c = db.prepare("SELECT id, name FROM companies WHERE id = ?").get(slot.company_id) as { id: string; name: string };
   const updated = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as BookingRow;
   res.json(bookingToJson(updated, { ...slot, company: c }));
+  void sendBookingEmailNotification(updated.id, "booking_cancelled").catch((err) => {
+    logger.error({ err, bookingId: updated.id }, "Failed to send booking cancelled email notification");
+  });
 });
