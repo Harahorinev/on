@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { companiesApi, getApiErrorMessage, slotsApi } from '../lib/api';
-import type { Company, ScheduleSlot, SlotStatus } from '../lib/api';
+import { companiesApi, employeesApi, getApiErrorMessage, slotsApi } from '../lib/api';
+import type { Company, CompanyEmployee, ScheduleSlot, SlotStatus } from '../lib/api';
 import { CreateCompanyForm } from '../components/CreateCompanyForm';
 import { CreateSlotForm } from '../components/CreateSlotForm';
 
@@ -20,25 +20,52 @@ export function CompanyPage() {
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [showSlotForm, setShowSlotForm] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [employees, setEmployees] = useState<CompanyEmployee[]>([]);
+  const [employeeLoadError, setEmployeeLoadError] = useState('');
+  const [showEmployeeForm, setShowEmployeeForm] = useState(false);
+  const [employeeName, setEmployeeName] = useState('');
+  const [employeeDescription, setEmployeeDescription] = useState('');
+  const [employeeSaving, setEmployeeSaving] = useState(false);
+  const [employeeSaveError, setEmployeeSaveError] = useState('');
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
-    companiesApi
-      .getMy()
-      .then((r) => {
-        setCompany(r.data);
-        return slotsApi.list(r.data.id);
-      })
-      .then((r) => setSlots(r.data))
-      .catch((err) => {
-        if (err.response?.status === 404) {
-          setCompany(null);
-          setSlots([]);
+    setEmployeeLoadError('');
+    try {
+      const companyRes = await companiesApi.getMy();
+      setCompany(companyRes.data);
+      const [slotsRes, employeesRes] = await Promise.allSettled([
+        slotsApi.list(companyRes.data.id),
+        employeesApi.list(companyRes.data.id),
+      ]);
+      if (slotsRes.status === 'fulfilled') {
+        setSlots(slotsRes.value.data);
+      } else {
+        setError('Не удалось загрузить слоты');
+      }
+      if (employeesRes.status === 'fulfilled') {
+        setEmployees(employeesRes.value.data);
+      } else {
+        setEmployees([]);
+        const status = (employeesRes.reason as { response?: { status?: number } })?.response?.status;
+        if (status === 404) {
+          setEmployeeLoadError('Управление сотрудниками станет доступно после обновления backend.');
         } else {
-          setError('Не удалось загрузить данные');
+          setEmployeeLoadError('Не удалось загрузить сотрудников.');
         }
-      })
-      .finally(() => setLoading(false));
+      }
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        setCompany(null);
+        setSlots([]);
+        setEmployees([]);
+      } else {
+        setError('Не удалось загрузить данные');
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -65,6 +92,32 @@ export function CompanyPage() {
       setError(getApiErrorMessage(err, 'Не удалось экспортировать CSV'));
     } finally {
       setExportLoading(false);
+    }
+  };
+
+  const handleCreateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!company) return;
+    const name = employeeName.trim();
+    if (!name) {
+      setEmployeeSaveError('Укажите имя сотрудника');
+      return;
+    }
+    setEmployeeSaveError('');
+    setEmployeeSaving(true);
+    try {
+      const res = await employeesApi.create(company.id, {
+        name,
+        description: employeeDescription.trim() || undefined,
+      });
+      setEmployees((prev) => [res.data, ...prev]);
+      setEmployeeName('');
+      setEmployeeDescription('');
+      setShowEmployeeForm(false);
+    } catch (err: unknown) {
+      setEmployeeSaveError(getApiErrorMessage(err, 'Не удалось сохранить сотрудника'));
+    } finally {
+      setEmployeeSaving(false);
     }
   };
 
@@ -137,6 +190,63 @@ export function CompanyPage() {
           );
         })}
         {slots.length === 0 && <p>Слотов пока нет.</p>}
+      </div>
+
+      <h2>Сотрудники</h2>
+      {showEmployeeForm ? (
+        <form className="card form-card-wide mb-1" onSubmit={handleCreateEmployee}>
+          <div className="form-group">
+            <label htmlFor="employee-name">Имя сотрудника</label>
+            <input
+              id="employee-name"
+              value={employeeName}
+              onChange={(e) => setEmployeeName(e.target.value)}
+              placeholder="Например, Иван Петров"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="employee-description">Описание</label>
+            <textarea
+              id="employee-description"
+              value={employeeDescription}
+              onChange={(e) => setEmployeeDescription(e.target.value)}
+              rows={3}
+              placeholder="Опыт, специализация и т.д."
+            />
+          </div>
+          {employeeSaveError && <p className="error">{employeeSaveError}</p>}
+          <div className="row">
+            <button type="submit" className="btn btn-primary" disabled={employeeSaving}>
+              {employeeSaving ? 'Сохранение…' : 'Сохранить сотрудника'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowEmployeeForm(false);
+                setEmployeeSaveError('');
+              }}
+            >
+              Отмена
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button type="button" className="btn btn-primary mb-1" onClick={() => setShowEmployeeForm(true)}>
+          Добавить сотрудника
+        </button>
+      )}
+
+      {employeeLoadError && <p className="muted">{employeeLoadError}</p>}
+      <div className="stack">
+        {employees.map((employee) => (
+          <div key={employee.id} className="card">
+            <strong>{employee.name}</strong>
+            {employee.description && <p className="text-muted">{employee.description}</p>}
+          </div>
+        ))}
+        {employees.length === 0 && !employeeLoadError && <p>Сотрудников пока нет.</p>}
       </div>
     </>
   );

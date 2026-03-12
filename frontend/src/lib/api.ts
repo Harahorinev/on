@@ -168,6 +168,16 @@ export interface UserEvent {
   createdAt: string;
 }
 
+export interface CompanyEmployee {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  photoUrl?: string;
+  directionIds?: string[];
+  createdAt?: string;
+}
+
 export const authApi = {
   register: (data: { email: string; password: string; name: string; role: UserRole }) =>
     api.post<{ accessToken: string; user: User }>('/auth/register', data),
@@ -206,6 +216,12 @@ export const slotsApi = {
     api.patch<ScheduleSlot>(`/companies/${companyId}/slots/${slotId}`, data),
   delete: (companyId: string, slotId: string) =>
     api.delete(`/companies/${companyId}/slots/${slotId}`),
+};
+
+export const employeesApi = {
+  list: (companyId: string) => api.get<CompanyEmployee[]>(`/companies/${companyId}/employees`),
+  create: (companyId: string, data: { name: string; description?: string; photoUrl?: string; directionIds?: string[] }) =>
+    api.post<CompanyEmployee>(`/companies/${companyId}/employees`, data),
 };
 
 export const bookingsApi = {
