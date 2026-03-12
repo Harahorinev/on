@@ -15,6 +15,7 @@ import { bookingsRouter, createBookingForSlot } from "./routes/bookings.js";
 import { chatRouter } from "./routes/chat.js";
 import { companiesRouter } from "./routes/companies.js";
 import { directionsRouter } from "./routes/directions.js";
+import { employeesRouter } from "./routes/employees.js";
 import { getSlotById, slotsRouter } from "./routes/slots.js";
 import { userEventsRouter } from "./routes/userEvents.js";
 import { userRouter } from "./routes/user.js";
@@ -68,6 +69,7 @@ app.use("/chat", authMiddleware, chatRouter);
 
 companiesRouter.use("/:companyId/slots", slotsRouter);
 companiesRouter.use("/:companyId/directions", directionsRouter);
+companiesRouter.use("/:companyId/employees", employeesRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

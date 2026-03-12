@@ -75,6 +75,16 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS employees (
+    id TEXT PRIMARY KEY,
+    company_id TEXT NOT NULL REFERENCES companies(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    photo_url TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_employees_company ON employees(company_id);
+
   /* B91: Join table for many-to-many: employees ↔ directions.
    * employee_id will reference users(id) or a future employees table when B44/B50 (Employee entity) is implemented.
    * Currently only used to clean up rows when a direction is deleted (see directions router). */

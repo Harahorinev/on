@@ -54,6 +54,13 @@ export const msg = {
   direction_nameRequired: "Укажите название",
   direction_nameNonEmpty: "Название не должно быть пустым",
 
+  // Employees
+  employee_notFound: "Сотрудник не найден",
+  employee_onlyCompanyCanManage: "Управлять сотрудниками может только компания",
+  employee_nameRequired: "Укажите имя сотрудника",
+  employee_nameNonEmpty: "Имя сотрудника не должно быть пустым",
+  employee_directionIdsInvalid: "directionIds должны ссылаться на направления компании",
+
   // Slots
   slot_notFound: "Слот не найден",
   slot_companyIdRequired: "Укажите companyId",

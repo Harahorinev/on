@@ -53,6 +53,15 @@ export interface DirectionRow {
   created_at: string;
 }
 
+export interface EmployeeRow {
+  id: string;
+  company_id: string;
+  name: string;
+  description: string | null;
+  photo_url: string | null;
+  created_at: string;
+}
+
 /** Companies list row with owner join (oid, owner_email, owner_name). */
 export interface CompanyRowWithOwner {
   id: string;
