@@ -131,6 +131,7 @@ export function SettingsPage() {
           <p>Загрузка…</p>
         ) : (
           <form onSubmit={handleSavePrefs}>
+            <h3 className="mt-0">Уведомления</h3>
             <div className="form-group form-group--checkbox">
               <label>
                 <input
@@ -140,6 +141,9 @@ export function SettingsPage() {
                 />
                 Уведомления по email
               </label>
+              <p className="text-muted m-0">
+                Письма о новых записях, отменах и других важных событиях. Рекомендуется оставить включённым.
+              </p>
             </div>
             <div className="form-group form-group--checkbox">
               <label>
@@ -150,7 +154,11 @@ export function SettingsPage() {
                 />
                 Уведомления в приложении
               </label>
+              <p className="text-muted m-0">
+                Короткие напоминания и обновления прямо в интерфейсе сервиса (без писем).
+              </p>
             </div>
+            <h3 className="mt-1">Календарь</h3>
             <div className="form-group">
               <label htmlFor="settings-calendar-view">Вид календаря</label>
               <select
