@@ -5,13 +5,14 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { CompanyPage } from './CompanyPage';
 import { useAuth } from '../contexts/AuthContext';
-import { companiesApi, employeesApi, slotsApi } from '../lib/api';
+import { companiesApi, directionsApi, employeesApi, slotsApi } from '../lib/api';
 
 vi.mock('../contexts/AuthContext');
 vi.mock('../lib/api', () => ({
   companiesApi: { getMy: vi.fn(), exportScheduleCsv: vi.fn() },
   slotsApi: { list: vi.fn() },
-  employeesApi: { list: vi.fn(), create: vi.fn() },
+  employeesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  directionsApi: { list: vi.fn() },
   getApiErrorMessage: vi.fn((_err: unknown, fallback: string) => fallback),
 }));
 
@@ -21,10 +22,15 @@ function wrap(ui: React.ReactElement) {
 
 describe('CompanyPage', () => {
   beforeEach(() => {
+    vi.mocked(directionsApi.list).mockResolvedValue({ data: [] } as never);
     vi.mocked(employeesApi.list).mockResolvedValue({ data: [] } as never);
     vi.mocked(employeesApi.create).mockResolvedValue({
       data: { id: 'e1', companyId: 'c1', name: 'Новый сотрудник' },
     } as never);
+    vi.mocked(employeesApi.update).mockResolvedValue({
+      data: { id: 'e1', companyId: 'c1', name: 'Обновлённый сотрудник' },
+    } as never);
+    vi.mocked(employeesApi.delete).mockResolvedValue({} as never);
     vi.mocked(companiesApi.exportScheduleCsv).mockResolvedValue({
       data: new Blob(['slot_id,start_at\n'], { type: 'text/csv' }),
     } as unknown as Awaited<ReturnType<typeof companiesApi.exportScheduleCsv>>);
@@ -104,5 +110,22 @@ describe('CompanyPage', () => {
     vi.mocked(employeesApi.list).mockRejectedValue({ response: { status: 404 } });
     wrap(<CompanyPage />);
     expect(await screen.findByText('Управление сотрудниками станет доступно после обновления backend.')).toBeInTheDocument();
+  });
+
+  it('удаляет сотрудника из списка', async () => {
+    vi.mocked(companiesApi.getMy).mockResolvedValue({
+      data: { id: 'c1', name: 'Моя компания', description: 'Описание', timezone: 'Europe/Moscow' },
+    } as unknown as Awaited<ReturnType<typeof companiesApi.getMy>>);
+    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
+    vi.mocked(employeesApi.list).mockResolvedValue({
+      data: [{ id: 'e1', companyId: 'c1', name: 'Сотрудник 1' }],
+    } as never);
+
+    const user = userEvent.setup();
+    wrap(<CompanyPage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Удалить' }));
+    expect(employeesApi.delete).toHaveBeenCalledWith('c1', 'e1');
+    expect(screen.queryByText('Сотрудник 1')).not.toBeInTheDocument();
   });
 });

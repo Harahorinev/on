@@ -178,6 +178,15 @@ export interface CompanyEmployee {
   createdAt?: string;
 }
 
+export interface Direction {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export const authApi = {
   register: (data: { email: string; password: string; name: string; role: UserRole }) =>
     api.post<{ accessToken: string; user: User }>('/auth/register', data),
@@ -222,6 +231,16 @@ export const employeesApi = {
   list: (companyId: string) => api.get<CompanyEmployee[]>(`/companies/${companyId}/employees`),
   create: (companyId: string, data: { name: string; description?: string; photoUrl?: string; directionIds?: string[] }) =>
     api.post<CompanyEmployee>(`/companies/${companyId}/employees`, data),
+  update: (
+    companyId: string,
+    employeeId: string,
+    data: { name?: string; description?: string; photoUrl?: string; directionIds?: string[] }
+  ) => api.patch<CompanyEmployee>(`/companies/${companyId}/employees/${employeeId}`, data),
+  delete: (companyId: string, employeeId: string) => api.delete(`/companies/${companyId}/employees/${employeeId}`),
+};
+
+export const directionsApi = {
+  list: (companyId: string) => api.get<Direction[]>(`/companies/${companyId}/directions`),
 };
 
 export const bookingsApi = {

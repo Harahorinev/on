@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { companiesApi, employeesApi, getApiErrorMessage, slotsApi } from '../lib/api';
-import type { Company, CompanyEmployee, ScheduleSlot, SlotStatus } from '../lib/api';
+import { companiesApi, directionsApi, employeesApi, getApiErrorMessage, slotsApi } from '../lib/api';
+import type { Company, CompanyEmployee, Direction, ScheduleSlot, SlotStatus } from '../lib/api';
 import { CreateCompanyForm } from '../components/CreateCompanyForm';
 import { CreateSlotForm } from '../components/CreateSlotForm';
 
@@ -25,8 +25,12 @@ export function CompanyPage() {
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [employeeName, setEmployeeName] = useState('');
   const [employeeDescription, setEmployeeDescription] = useState('');
+  const [employeeDirectionIds, setEmployeeDirectionIds] = useState<string[]>([]);
   const [employeeSaving, setEmployeeSaving] = useState(false);
   const [employeeSaveError, setEmployeeSaveError] = useState('');
+  const [directions, setDirections] = useState<Direction[]>([]);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [employeeDeletingId, setEmployeeDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -34,9 +38,10 @@ export function CompanyPage() {
     try {
       const companyRes = await companiesApi.getMy();
       setCompany(companyRes.data);
-      const [slotsRes, employeesRes] = await Promise.allSettled([
+      const [slotsRes, employeesRes, directionsRes] = await Promise.allSettled([
         slotsApi.list(companyRes.data.id),
         employeesApi.list(companyRes.data.id),
+        directionsApi.list(companyRes.data.id),
       ]);
       if (slotsRes.status === 'fulfilled') {
         setSlots(slotsRes.value.data);
@@ -53,6 +58,11 @@ export function CompanyPage() {
         } else {
           setEmployeeLoadError('Не удалось загрузить сотрудников.');
         }
+      }
+      if (directionsRes.status === 'fulfilled') {
+        setDirections(directionsRes.value.data);
+      } else {
+        setDirections([]);
       }
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
@@ -106,19 +116,67 @@ export function CompanyPage() {
     setEmployeeSaveError('');
     setEmployeeSaving(true);
     try {
-      const res = await employeesApi.create(company.id, {
-        name,
-        description: employeeDescription.trim() || undefined,
-      });
-      setEmployees((prev) => [res.data, ...prev]);
+      if (editingEmployeeId) {
+        const res = await employeesApi.update(company.id, editingEmployeeId, {
+          name,
+          description: employeeDescription.trim() || undefined,
+          directionIds: employeeDirectionIds,
+        });
+        setEmployees((prev) => prev.map((employee) => (employee.id === editingEmployeeId ? res.data : employee)));
+      } else {
+        const res = await employeesApi.create(company.id, {
+          name,
+          description: employeeDescription.trim() || undefined,
+          directionIds: employeeDirectionIds,
+        });
+        setEmployees((prev) => [res.data, ...prev]);
+      }
       setEmployeeName('');
       setEmployeeDescription('');
+      setEmployeeDirectionIds([]);
       setShowEmployeeForm(false);
+      setEditingEmployeeId(null);
     } catch (err: unknown) {
       setEmployeeSaveError(getApiErrorMessage(err, 'Не удалось сохранить сотрудника'));
     } finally {
       setEmployeeSaving(false);
     }
+  };
+
+  const handleStartEditEmployee = (employee: CompanyEmployee) => {
+    setEditingEmployeeId(employee.id);
+    setShowEmployeeForm(true);
+    setEmployeeName(employee.name);
+    setEmployeeDescription(employee.description ?? '');
+    setEmployeeDirectionIds(employee.directionIds ?? []);
+    setEmployeeSaveError('');
+  };
+
+  const handleDeleteEmployee = async (employeeId: string) => {
+    if (!company) return;
+    setEmployeeDeletingId(employeeId);
+    setEmployeeSaveError('');
+    try {
+      await employeesApi.delete(company.id, employeeId);
+      setEmployees((prev) => prev.filter((e) => e.id !== employeeId));
+      if (editingEmployeeId === employeeId) {
+        setEditingEmployeeId(null);
+        setShowEmployeeForm(false);
+        setEmployeeName('');
+        setEmployeeDescription('');
+        setEmployeeDirectionIds([]);
+      }
+    } catch (err: unknown) {
+      setEmployeeSaveError(getApiErrorMessage(err, 'Не удалось удалить сотрудника'));
+    } finally {
+      setEmployeeDeletingId(null);
+    }
+  };
+
+  const handleDirectionToggle = (directionId: string) => {
+    setEmployeeDirectionIds((prev) =>
+      prev.includes(directionId) ? prev.filter((id) => id !== directionId) : [...prev, directionId]
+    );
   };
 
   if (user?.role !== 'COMPANY') {
@@ -215,17 +273,38 @@ export function CompanyPage() {
               placeholder="Опыт, специализация и т.д."
             />
           </div>
+          {directions.length > 0 && (
+            <div className="form-group form-group--checkbox">
+              <label>Направления</label>
+              <div className="stack-sm">
+                {directions.map((direction) => (
+                  <label key={direction.id}>
+                    <input
+                      type="checkbox"
+                      checked={employeeDirectionIds.includes(direction.id)}
+                      onChange={() => handleDirectionToggle(direction.id)}
+                    />
+                    {direction.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           {employeeSaveError && <p className="error">{employeeSaveError}</p>}
           <div className="row">
             <button type="submit" className="btn btn-primary" disabled={employeeSaving}>
-              {employeeSaving ? 'Сохранение…' : 'Сохранить сотрудника'}
+              {employeeSaving ? 'Сохранение…' : editingEmployeeId ? 'Сохранить изменения' : 'Сохранить сотрудника'}
             </button>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={() => {
+                setEditingEmployeeId(null);
                 setShowEmployeeForm(false);
                 setEmployeeSaveError('');
+                setEmployeeName('');
+                setEmployeeDescription('');
+                setEmployeeDirectionIds([]);
               }}
             >
               Отмена
@@ -244,6 +323,23 @@ export function CompanyPage() {
           <div key={employee.id} className="card">
             <strong>{employee.name}</strong>
             {employee.description && <p className="text-muted">{employee.description}</p>}
+            <div className="row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleStartEditEmployee(employee)}
+              >
+                Редактировать
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={employeeDeletingId === employee.id}
+                onClick={() => void handleDeleteEmployee(employee.id)}
+              >
+                {employeeDeletingId === employee.id ? 'Удаление…' : 'Удалить'}
+              </button>
+            </div>
           </div>
         ))}
         {employees.length === 0 && !employeeLoadError && <p>Сотрудников пока нет.</p>}
