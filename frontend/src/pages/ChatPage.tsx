@@ -14,8 +14,7 @@ export function ChatPage() {
     listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
     setLoading(true);
@@ -52,13 +51,25 @@ export function ChatPage() {
           </div>
         ))}
       </div>
-      <form className="chat-input-row" onSubmit={handleSend}>
+      <form
+        className="chat-input-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSend();
+        }}
+      >
         <textarea
           className="chat-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Напишите сообщение..."
           rows={2}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              void handleSend();
+            }
+          }}
         />
         <button type="submit" className="btn btn-primary chat-send-btn" disabled={loading || !input.trim()}>
           {loading ? 'Отправка…' : 'Отправить'}

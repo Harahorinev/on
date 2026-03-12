@@ -53,5 +53,39 @@ describe('ChatPage', () => {
     expect(api.chatApi.sendToAssistant).toHaveBeenCalledWith({ message: 'Привет', conversationId: undefined });
     expect(await screen.findByText('Ответ ассистента')).toBeInTheDocument();
   });
+
+  it('sends message on Enter and keeps Shift+Enter for new line', async () => {
+    vi.mocked(api.chatApi.sendToAssistant).mockResolvedValue({
+      data: {
+        conversationId: 'conv-2',
+        messages: [
+          { id: '1', role: 'user', content: 'Строка 1\nСтрока 2', createdAt: '2024-01-01T00:00:00Z' },
+          { id: '2', role: 'assistant', content: 'Ок', createdAt: '2024-01-01T00:00:01Z' },
+        ],
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as never,
+    });
+    const user = userEvent.setup();
+    wrap(<ChatPage />);
+    const textarea = screen.getByPlaceholderText(/напишите сообщение/i);
+
+    // Shift+Enter добавляет перенос строки, но не отправляет
+    await user.type(textarea, 'Строка 1');
+    await user.keyboard('{Shift>}{Enter/}{/Shift}');
+    await user.type(textarea, 'Строка 2');
+    expect(api.chatApi.sendToAssistant).not.toHaveBeenCalled();
+
+    // Enter без Shift отправляет
+    await user.keyboard('{Enter}');
+
+    expect(api.chatApi.sendToAssistant).toHaveBeenCalledWith({
+      message: 'Строка 1\nСтрока 2',
+      conversationId: undefined,
+    });
+    expect(await screen.findByText('Ок')).toBeInTheDocument();
+  });
 });
 

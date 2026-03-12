@@ -375,7 +375,7 @@ input, textarea, select {
 .chat-drawer {
   position: fixed;
   right: var(--space-4);
-  bottom: var(--space-4);
+  bottom: var(--space-6);
   width: min(380px, 100% - 2 * var(--space-4));
   max-height: 70vh;
   background: #ffffff;
