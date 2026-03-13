@@ -63,6 +63,7 @@ export function BookingsPage() {
                   <p className="text-muted">
                     {start && end ? `${start.toLocaleString('ru')} – ${end.toLocaleString('ru')}` : '—'}
                   </p>
+                  {slot?.employee?.name && <p className="text-sm m-0">Сотрудник: {slot.employee.name}</p>}
                   <p className="text-sm m-0">Статус: {b.status}</p>
                 </div>
                 {isBooked && (

@@ -97,7 +97,7 @@ employeesRouter.get("/", (req: Request, res: Response, next: NextFunction) => {
   if (!companyId) return;
   const rows = db
     .prepare(
-      "SELECT id, company_id, name, description, photo_url, created_at FROM employees WHERE company_id = ? ORDER BY created_at DESC"
+      "SELECT id, company_id, name, description, photo_url, created_at, deleted_at FROM employees WHERE company_id = ? AND deleted_at IS NULL ORDER BY created_at DESC"
     )
     .all(companyId) as EmployeeRow[];
   const directionMap = getEmployeeDirectionMap(rows.map((row) => row.id));
@@ -140,7 +140,7 @@ employeesRouter.post("/", (req: Request, res: Response, next: NextFunction) => {
   ).run(id, companyId, name.trim(), description?.trim() || null, photoUrl?.trim() || null);
   setEmployeeDirections(id, directionIds);
   const row = db
-    .prepare("SELECT id, company_id, name, description, photo_url, created_at FROM employees WHERE id = ?")
+    .prepare("SELECT id, company_id, name, description, photo_url, created_at, deleted_at FROM employees WHERE id = ?")
     .get(id) as EmployeeRow;
   res.status(201).json(employeeToJson(row, directionIds));
 });
@@ -150,7 +150,9 @@ employeesRouter.patch("/:employeeId", (req: Request, res: Response, next: NextFu
   if (!companyId) return;
   const { employeeId } = req.params;
   const existing = db
-    .prepare("SELECT id, company_id, name, description, photo_url, created_at FROM employees WHERE id = ? AND company_id = ?")
+    .prepare(
+      "SELECT id, company_id, name, description, photo_url, created_at, deleted_at FROM employees WHERE id = ? AND company_id = ? AND deleted_at IS NULL"
+    )
     .get(employeeId, companyId) as EmployeeRow | undefined;
   if (!existing) {
     next(new AppError(404, msg.employee_notFound));
@@ -212,7 +214,7 @@ employeesRouter.patch("/:employeeId", (req: Request, res: Response, next: NextFu
   }
 
   const row = db
-    .prepare("SELECT id, company_id, name, description, photo_url, created_at FROM employees WHERE id = ?")
+    .prepare("SELECT id, company_id, name, description, photo_url, created_at, deleted_at FROM employees WHERE id = ?")
     .get(employeeId) as EmployeeRow;
   const effectiveDirectionIds =
     directionIds ?? getEmployeeDirectionMap([employeeId]).get(employeeId) ?? [];
@@ -223,14 +225,39 @@ employeesRouter.delete("/:employeeId", (req: Request, res: Response, next: NextF
   const companyId = ensureCompanyOwner(req, next);
   if (!companyId) return;
   const { employeeId } = req.params;
+  const deleteFutureSlots = req.query.deleteFutureSlots === "true";
   const existing = db
-    .prepare("SELECT id FROM employees WHERE id = ? AND company_id = ?")
+    .prepare("SELECT id FROM employees WHERE id = ? AND company_id = ? AND deleted_at IS NULL")
     .get(employeeId, companyId) as { id: string } | undefined;
   if (!existing) {
     next(new AppError(404, msg.employee_notFound));
     return;
   }
-  db.prepare("DELETE FROM employee_directions WHERE employee_id = ?").run(employeeId);
-  db.prepare("DELETE FROM employees WHERE id = ?").run(employeeId);
+  const nowIso = new Date().toISOString();
+  const deleteEmployeeTx = db.transaction(() => {
+    if (deleteFutureSlots) {
+      db.prepare(
+        `DELETE FROM bookings
+         WHERE slot_id IN (
+           SELECT id FROM slots
+           WHERE company_id = ? AND employee_id = ? AND end_at >= ?
+         )`
+      ).run(companyId, employeeId, nowIso);
+      db.prepare("DELETE FROM slots WHERE company_id = ? AND employee_id = ? AND end_at >= ?").run(
+        companyId,
+        employeeId,
+        nowIso
+      );
+    }
+    // Future slots become available for reassignment, but past slots keep the original employee for history.
+    db.prepare("UPDATE slots SET employee_id = NULL WHERE company_id = ? AND employee_id = ? AND end_at >= ?").run(
+      companyId,
+      employeeId,
+      nowIso
+    );
+    db.prepare("DELETE FROM employee_directions WHERE employee_id = ?").run(employeeId);
+    db.prepare("UPDATE employees SET deleted_at = ? WHERE id = ?").run(nowIso, employeeId);
+  });
+  deleteEmployeeTx();
   res.status(204).send();
 });

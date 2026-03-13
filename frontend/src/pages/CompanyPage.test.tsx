@@ -10,7 +10,7 @@ import { companiesApi, directionsApi, employeesApi, slotsApi } from '../lib/api'
 vi.mock('../contexts/AuthContext');
 vi.mock('../lib/api', () => ({
   companiesApi: { getMy: vi.fn(), exportScheduleCsv: vi.fn() },
-  slotsApi: { list: vi.fn() },
+  slotsApi: { list: vi.fn(), update: vi.fn() },
   employeesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   directionsApi: { list: vi.fn() },
   getApiErrorMessage: vi.fn((_err: unknown, fallback: string) => fallback),
@@ -31,6 +31,18 @@ describe('CompanyPage', () => {
       data: { id: 'e1', companyId: 'c1', name: 'Обновлённый сотрудник' },
     } as never);
     vi.mocked(employeesApi.delete).mockResolvedValue({} as never);
+    vi.mocked(slotsApi.update).mockResolvedValue({
+      data: {
+        id: 's1',
+        companyId: 'c1',
+        employeeId: 'e1',
+        startAt: '2025-03-01T10:00:00Z',
+        endAt: '2025-03-01T11:00:00Z',
+        capacity: 1,
+        status: 'OPEN',
+        employee: { id: 'e1', name: 'Новый сотрудник' },
+      },
+    } as never);
     vi.mocked(companiesApi.exportScheduleCsv).mockResolvedValue({
       data: new Blob(['slot_id,start_at\n'], { type: 'text/csv' }),
     } as unknown as Awaited<ReturnType<typeof companiesApi.exportScheduleCsv>>);
@@ -78,7 +90,19 @@ describe('CompanyPage', () => {
     vi.mocked(companiesApi.getMy).mockResolvedValue({
       data: { id: 'c1', name: 'Моя компания', description: 'Описание', timezone: 'Europe/Moscow' },
     } as unknown as Awaited<ReturnType<typeof companiesApi.getMy>>);
-    vi.mocked(slotsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
+    vi.mocked(slotsApi.list).mockResolvedValue({
+      data: [
+        {
+          id: 's1',
+          companyId: 'c1',
+          startAt: '2025-03-01T10:00:00Z',
+          endAt: '2025-03-01T11:00:00Z',
+          capacity: 1,
+          status: 'OPEN',
+          title: 'Слот 1',
+        },
+      ],
+    } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
     wrap(<CompanyPage />);
     expect(await screen.findByRole('heading', { name: 'Моя компания' })).toBeInTheDocument();
     expect(await screen.findByText('Слоты расписания')).toBeInTheDocument();
@@ -86,6 +110,7 @@ describe('CompanyPage', () => {
     expect(await screen.findByRole('button', { name: 'Экспорт CSV' })).toBeInTheDocument();
     expect(await screen.findByText('Сотрудники')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Добавить сотрудника' })).toBeInTheDocument();
+    expect(await screen.findByText('Сотрудник: Не назначен')).toBeInTheDocument();
   });
 
   it('экспортирует csv по кнопке', async () => {
@@ -98,7 +123,13 @@ describe('CompanyPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Экспорт CSV' }));
 
-    expect(companiesApi.exportScheduleCsv).toHaveBeenCalledWith('c1');
+    expect(companiesApi.exportScheduleCsv).toHaveBeenCalledWith('c1', {
+      dateFrom: undefined,
+      dateTo: undefined,
+      employeeId: undefined,
+      sortBy: 'startAt',
+      sortOrder: 'asc',
+    });
     expect(window.URL.createObjectURL).toHaveBeenCalled();
   });
 
@@ -117,15 +148,53 @@ describe('CompanyPage', () => {
       data: { id: 'c1', name: 'Моя компания', description: 'Описание', timezone: 'Europe/Moscow' },
     } as unknown as Awaited<ReturnType<typeof companiesApi.getMy>>);
     vi.mocked(slotsApi.list).mockResolvedValue({ data: [] } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
-    vi.mocked(employeesApi.list).mockResolvedValue({
-      data: [{ id: 'e1', companyId: 'c1', name: 'Сотрудник 1' }],
-    } as never);
+    vi.mocked(employeesApi.list)
+      .mockResolvedValueOnce({
+        data: [{ id: 'e1', companyId: 'c1', name: 'Сотрудник 1' }],
+      } as never)
+      .mockResolvedValueOnce({ data: [] } as never);
 
     const user = userEvent.setup();
     wrap(<CompanyPage />);
 
     await user.click(await screen.findByRole('button', { name: 'Удалить' }));
-    expect(employeesApi.delete).toHaveBeenCalledWith('c1', 'e1');
-    expect(screen.queryByText('Сотрудник 1')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Удаление сотрудника' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Оставить без исполнителя' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Удалить вместе с событиями' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Оставить без исполнителя' }));
+
+    expect(employeesApi.delete).toHaveBeenCalledWith('c1', 'e1', { deleteFutureSlots: false });
+    expect(await screen.findByText('Сотрудников пока нет.')).toBeInTheDocument();
+  });
+
+  it('назначает сотрудника слоту', async () => {
+    vi.mocked(companiesApi.getMy).mockResolvedValue({
+      data: { id: 'c1', name: 'Моя компания', description: 'Описание', timezone: 'Europe/Moscow' },
+    } as unknown as Awaited<ReturnType<typeof companiesApi.getMy>>);
+    vi.mocked(slotsApi.list).mockResolvedValue({
+      data: [
+        {
+          id: 's1',
+          companyId: 'c1',
+          startAt: '2025-03-01T10:00:00Z',
+          endAt: '2025-03-01T11:00:00Z',
+          capacity: 1,
+          status: 'OPEN',
+          title: 'Слот 1',
+        },
+      ],
+    } as unknown as Awaited<ReturnType<typeof slotsApi.list>>);
+    vi.mocked(employeesApi.list).mockResolvedValue({
+      data: [{ id: 'e1', companyId: 'c1', name: 'Новый сотрудник' }],
+    } as never);
+
+    const user = userEvent.setup();
+    wrap(<CompanyPage />);
+
+    await user.selectOptions(await screen.findByLabelText('Назначить сотрудника'), 'e1');
+
+    expect(slotsApi.update).toHaveBeenCalledWith('c1', 's1', { employeeId: 'e1' });
+    expect(await screen.findByText('Сотрудник: Новый сотрудник')).toBeInTheDocument();
   });
 });

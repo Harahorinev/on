@@ -14,6 +14,7 @@ export interface BookingRow {
 export interface SlotRow {
   id: string;
   company_id: string;
+  employee_id: string | null;
   start_at: string;
   end_at: string;
   capacity: number;
@@ -27,6 +28,11 @@ export interface SlotRow {
 export interface SlotRowWithCompany extends SlotRow {
   cid: string;
   cname: string;
+}
+
+export interface SlotRowWithCompanyAndEmployee extends SlotRowWithCompany {
+  eid: string | null;
+  ename: string | null;
 }
 
 export interface UserEventRow {
@@ -60,6 +66,7 @@ export interface EmployeeRow {
   description: string | null;
   photo_url: string | null;
   created_at: string;
+  deleted_at: string | null;
 }
 
 /** Companies list row with owner join (oid, owner_email, owner_name). */
@@ -77,6 +84,7 @@ export interface CompanyRowWithOwner {
 export interface BookingJoinedRow extends BookingRow {
   s_id: string;
   company_id: string;
+  employee_id: string | null;
   start_at: string;
   end_at: string;
   capacity: number;
@@ -86,4 +94,6 @@ export interface BookingJoinedRow extends BookingRow {
   location: string | null;
   c_id: string;
   c_name: string;
+  e_id: string | null;
+  e_name: string | null;
 }

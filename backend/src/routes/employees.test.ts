@@ -96,4 +96,93 @@ describe("Employees routes", () => {
       .set("Authorization", `Bearer ${ownerToken}`);
     expect(del.status).toBe(204);
   });
+
+  it("DELETE keeps future slots but clears employee assignment by default", async () => {
+    const create = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Busy Employee" });
+    const employeeId = create.body.id;
+    const slot = await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({
+        startAt: new Date(Date.now() + 3600000).toISOString(),
+        endAt: new Date(Date.now() + 7200000).toISOString(),
+        capacity: 1,
+        employeeId,
+      });
+    const del = await request(app)
+      .delete(`/companies/${companyId}/employees/${employeeId}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(del.status).toBe(204);
+
+    const slotRes = await request(app).get(`/slots/${slot.body.id}`);
+    expect(slotRes.status).toBe(200);
+    expect(slotRes.body.employeeId).toBeUndefined();
+  });
+
+  it("DELETE keeps deleted employee on past slots for history", async () => {
+    const create = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Past Employee" });
+    const employeeId = create.body.id;
+    const pastStart = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const pastEnd = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+
+    await request(app)
+      .patch(`/companies/${companyId}/employees/${employeeId}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ description: "Was active" });
+
+    const slotId = `past-slot-${employeeId}`;
+    const { db } = await import("../db.js");
+    db.prepare(
+      "INSERT INTO slots (id, company_id, employee_id, start_at, end_at, capacity, status, title) VALUES (?, ?, ?, ?, ?, ?, 'CLOSED', ?)"
+    ).run(slotId, companyId, employeeId, pastStart, pastEnd, 1, "Past Visit");
+
+    const del = await request(app)
+      .delete(`/companies/${companyId}/employees/${employeeId}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(del.status).toBe(204);
+
+    const slotRes = await request(app).get(`/slots/${slotId}`);
+    expect(slotRes.status).toBe(200);
+    expect(slotRes.body.employeeId).toBe(employeeId);
+    expect(slotRes.body.employee.name).toBe("Past Employee");
+  });
+
+  it("DELETE removes employee with future slots when confirmed by query param", async () => {
+    const create = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Delete With Slots" });
+    const employeeId = create.body.id;
+    const slot = await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({
+        startAt: new Date(Date.now() + 3600000).toISOString(),
+        endAt: new Date(Date.now() + 7200000).toISOString(),
+        capacity: 1,
+        employeeId,
+      });
+    const bookingUser = createUser(`emp-book-user-${employeeId}@test.co`, "123", "Booker", "USER");
+    const bookingToken = signToken(bookingUser);
+    await request(app).post(`/slots/${slot.body.id}/bookings`).set("Authorization", `Bearer ${bookingToken}`);
+
+    const del = await request(app)
+      .delete(`/companies/${companyId}/employees/${employeeId}?deleteFutureSlots=true`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(del.status).toBe(204);
+
+    const employeeList = await request(app)
+      .get(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(employeeList.body.some((row: { id: string }) => row.id === employeeId)).toBe(false);
+
+    const slotRes = await request(app).get(`/slots/${slot.body.id}`);
+    expect(slotRes.status).toBe(404);
+  });
 });

@@ -47,6 +47,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS slots (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL REFERENCES companies(id),
+    employee_id TEXT REFERENCES employees(id),
     start_at TEXT NOT NULL,
     end_at TEXT NOT NULL,
     capacity INTEGER NOT NULL DEFAULT 1,
@@ -81,7 +82,8 @@ db.exec(`
     name TEXT NOT NULL,
     description TEXT,
     photo_url TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    deleted_at TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_employees_company ON employees(company_id);
 
@@ -178,12 +180,23 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id);
   CREATE INDEX IF NOT EXISTS idx_user_events_user ON user_events(user_id);
   CREATE INDEX IF NOT EXISTS idx_slots_company ON slots(company_id);
+  CREATE INDEX IF NOT EXISTS idx_slots_employee ON slots(employee_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_slot ON bookings(slot_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
   CREATE INDEX IF NOT EXISTS idx_directions_company ON directions(company_id);
 `);
 
 // B74: Email verification flags. Added via ALTER to avoid breaking existing DBs.
+try {
+  db.exec("ALTER TABLE employees ADD COLUMN deleted_at TEXT;");
+} catch {
+  // ignore if column already exists
+}
+try {
+  db.exec("ALTER TABLE slots ADD COLUMN employee_id TEXT REFERENCES employees(id);");
+} catch {
+  // ignore if column already exists
+}
 try {
   db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0;");
 } catch {
@@ -194,6 +207,7 @@ try {
 } catch {
   // ignore if column already exists
 }
+db.exec("CREATE INDEX IF NOT EXISTS idx_slots_employee ON slots(employee_id);");
 
 export function uuid() {
   return randomUUID();

@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { slotsApi, getApiErrorMessage } from '../lib/api';
+import type { CompanyEmployee } from '../lib/api';
 import { useNotifications } from '../contexts/NotificationContext';
 
 export function CreateSlotForm({
   companyId,
+  employees,
   onSuccess,
   onCancel,
 }: {
   companyId: string;
+  employees: CompanyEmployee[];
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -18,6 +21,7 @@ export function CreateSlotForm({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +52,7 @@ export function CreateSlotForm({
         title: title || undefined,
         description: description || undefined,
         location: location || undefined,
+        employeeId: employeeId || undefined,
       });
       notifySuccess('Слот создан');
       onSuccess();
@@ -103,6 +108,17 @@ export function CreateSlotForm({
         <div className="form-group">
           <label>Место (необязательно)</label>
           <input value={location} onChange={(e) => setLocation(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label htmlFor="slot-employee">Сотрудник</label>
+          <select id="slot-employee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+            <option value="">Не назначен</option>
+            {employees.map((employee) => (
+              <option key={employee.id} value={employee.id}>
+                {employee.name}
+              </option>
+            ))}
+          </select>
         </div>
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn btn-primary" disabled={loading}>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { companiesApi, directionsApi, employeesApi, getApiErrorMessage, slotsApi } from '../lib/api';
-import type { Company, CompanyEmployee, Direction, ScheduleSlot, SlotStatus } from '../lib/api';
+import type { Company, CompanyEmployee, Direction, ScheduleSlot, SlotSortBy, SlotStatus } from '../lib/api';
 import { CreateCompanyForm } from '../components/CreateCompanyForm';
 import { CreateSlotForm } from '../components/CreateSlotForm';
 
@@ -10,6 +10,12 @@ const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
   CANCELLED: 'Отменён',
   CLOSED: 'Закрыт',
 };
+
+function dateFromToISO(dateStr: string, endOfDay: boolean): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return date.toISOString();
+}
 
 export function CompanyPage() {
   const { user } = useAuth();
@@ -31,6 +37,13 @@ export function CompanyPage() {
   const [directions, setDirections] = useState<Direction[]>([]);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [employeeDeletingId, setEmployeeDeletingId] = useState<string | null>(null);
+  const [pendingEmployeeDelete, setPendingEmployeeDelete] = useState<CompanyEmployee | null>(null);
+  const [slotEmployeeFilterId, setSlotEmployeeFilterId] = useState('');
+  const [slotDateFrom, setSlotDateFrom] = useState('');
+  const [slotDateTo, setSlotDateTo] = useState('');
+  const [slotSortBy, setSlotSortBy] = useState<SlotSortBy>('startAt');
+  const [slotSortOrder, setSlotSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [slotUpdatingId, setSlotUpdatingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,8 +51,15 @@ export function CompanyPage() {
     try {
       const companyRes = await companiesApi.getMy();
       setCompany(companyRes.data);
+      const slotParams = {
+        dateFrom: slotDateFrom ? dateFromToISO(slotDateFrom, false) : undefined,
+        dateTo: slotDateTo ? dateFromToISO(slotDateTo, true) : undefined,
+        employeeId: slotEmployeeFilterId || undefined,
+        sortBy: slotSortBy,
+        sortOrder: slotSortOrder,
+      };
       const [slotsRes, employeesRes, directionsRes] = await Promise.allSettled([
-        slotsApi.list(companyRes.data.id),
+        slotsApi.list(companyRes.data.id, slotParams),
         employeesApi.list(companyRes.data.id),
         directionsApi.list(companyRes.data.id),
       ]);
@@ -76,7 +96,7 @@ export function CompanyPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [slotDateFrom, slotDateTo, slotEmployeeFilterId, slotSortBy, slotSortOrder]);
 
   useEffect(() => {
     if (user?.role !== 'COMPANY') return;
@@ -88,7 +108,13 @@ export function CompanyPage() {
     setError('');
     setExportLoading(true);
     try {
-      const response = await companiesApi.exportScheduleCsv(company.id);
+      const response = await companiesApi.exportScheduleCsv(company.id, {
+        dateFrom: slotDateFrom ? dateFromToISO(slotDateFrom, false) : undefined,
+        dateTo: slotDateTo ? dateFromToISO(slotDateTo, true) : undefined,
+        employeeId: slotEmployeeFilterId || undefined,
+        sortBy: slotSortBy,
+        sortOrder: slotSortOrder,
+      });
       const blobUrl = window.URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -102,6 +128,22 @@ export function CompanyPage() {
       setError(getApiErrorMessage(err, 'Не удалось экспортировать CSV'));
     } finally {
       setExportLoading(false);
+    }
+  };
+
+  const handleSlotEmployeeChange = async (slotId: string, employeeId: string) => {
+    if (!company) return;
+    setError('');
+    setSlotUpdatingId(slotId);
+    try {
+      const response = await slotsApi.update(company.id, slotId, {
+        employeeId: employeeId || null,
+      });
+      setSlots((prev) => prev.map((slot) => (slot.id === slotId ? response.data : slot)));
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Не удалось назначить сотрудника для слота'));
+    } finally {
+      setSlotUpdatingId(null);
     }
   };
 
@@ -152,12 +194,19 @@ export function CompanyPage() {
     setEmployeeSaveError('');
   };
 
-  const handleDeleteEmployee = async (employeeId: string) => {
+  const handleDeleteEmployee = (employee: CompanyEmployee) => {
+    setPendingEmployeeDelete(employee);
+    setEmployeeSaveError('');
+  };
+
+  const handleConfirmDeleteEmployee = async (deleteFutureSlots: boolean) => {
     if (!company) return;
+    if (!pendingEmployeeDelete) return;
+    const employeeId = pendingEmployeeDelete.id;
     setEmployeeDeletingId(employeeId);
     setEmployeeSaveError('');
     try {
-      await employeesApi.delete(company.id, employeeId);
+      await employeesApi.delete(company.id, employeeId, { deleteFutureSlots });
       setEmployees((prev) => prev.filter((e) => e.id !== employeeId));
       if (editingEmployeeId === employeeId) {
         setEditingEmployeeId(null);
@@ -166,6 +215,8 @@ export function CompanyPage() {
         setEmployeeDescription('');
         setEmployeeDirectionIds([]);
       }
+      setPendingEmployeeDelete(null);
+      await load();
     } catch (err: unknown) {
       setEmployeeSaveError(getApiErrorMessage(err, 'Не удалось удалить сотрудника'));
     } finally {
@@ -215,6 +266,7 @@ export function CompanyPage() {
       {showSlotForm ? (
         <CreateSlotForm
           companyId={company.id}
+          employees={employees}
           onSuccess={() => {
             setShowSlotForm(false);
             load();
@@ -231,6 +283,75 @@ export function CompanyPage() {
           </button>
         </div>
       )}
+      <div className="card mb-1">
+        <p className="text-sm mt-0 mb-half text-muted">Фильтры и сортировка слотов</p>
+        <div className="filter-row">
+          <div className="form-group mb-0">
+            <label htmlFor="slot-filter-employee">Сотрудник</label>
+            <select
+              id="slot-filter-employee"
+              value={slotEmployeeFilterId}
+              onChange={(e) => setSlotEmployeeFilterId(e.target.value)}
+            >
+              <option value="">Все сотрудники и неназначенные</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group mb-0">
+            <label htmlFor="slot-filter-date-from">С</label>
+            <input
+              id="slot-filter-date-from"
+              type="date"
+              value={slotDateFrom}
+              onChange={(e) => setSlotDateFrom(e.target.value)}
+            />
+          </div>
+          <div className="form-group mb-0">
+            <label htmlFor="slot-filter-date-to">По</label>
+            <input id="slot-filter-date-to" type="date" value={slotDateTo} onChange={(e) => setSlotDateTo(e.target.value)} />
+          </div>
+          <div className="form-group mb-0">
+            <label htmlFor="slot-sort-by">Сортировка</label>
+            <select id="slot-sort-by" value={slotSortBy} onChange={(e) => setSlotSortBy(e.target.value as SlotSortBy)}>
+              <option value="startAt">По времени</option>
+              <option value="employeeName">По сотруднику</option>
+            </select>
+          </div>
+          <div className="form-group mb-0">
+            <label htmlFor="slot-sort-order">Порядок</label>
+            <select
+              id="slot-sort-order"
+              value={slotSortOrder}
+              onChange={(e) => setSlotSortOrder(e.target.value as 'asc' | 'desc')}
+            >
+              <option value="asc">По возрастанию</option>
+              <option value="desc">По убыванию</option>
+            </select>
+          </div>
+        </div>
+        <div className="row">
+          <button type="button" className="btn btn-secondary" onClick={() => void load()}>
+            Применить
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setSlotEmployeeFilterId('');
+              setSlotDateFrom('');
+              setSlotDateTo('');
+              setSlotSortBy('startAt');
+              setSlotSortOrder('asc');
+            }}
+          >
+            Сбросить
+          </button>
+        </div>
+      </div>
       <div className="stack">
         {slots.map((slot) => {
           const start = new Date(slot.startAt);
@@ -244,6 +365,23 @@ export function CompanyPage() {
               </p>
               <p className="text-sm m-0">Записано: {booked} / {slot.capacity}</p>
               <p className="text-sm m-0">Статус: {SLOT_STATUS_LABEL[slot.status]}</p>
+              <p className="text-sm m-0">Сотрудник: {slot.employee?.name ?? 'Не назначен'}</p>
+              <div className="form-group mt-half mb-0">
+                <label htmlFor={`slot-employee-${slot.id}`}>Назначить сотрудника</label>
+                <select
+                  id={`slot-employee-${slot.id}`}
+                  value={slot.employeeId ?? ''}
+                  disabled={slotUpdatingId === slot.id}
+                  onChange={(e) => void handleSlotEmployeeChange(slot.id, e.target.value)}
+                >
+                  <option value="">Не назначен</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           );
         })}
@@ -317,6 +455,49 @@ export function CompanyPage() {
         </button>
       )}
 
+      {pendingEmployeeDelete && (
+        <div className="modal-backdrop" role="presentation">
+          <div className="card modal-card" role="dialog" aria-modal="true" aria-labelledby="employee-delete-dialog-title">
+            <h3 id="employee-delete-dialog-title">Удаление сотрудника</h3>
+            <p>
+              Что сделать с будущими событиями сотрудника <strong>{pendingEmployeeDelete.name}</strong>?
+            </p>
+            <p className="text-sm m-0">
+              Прошедшие события сохранят удалённого сотрудника в истории, чтобы было видно, кто именно их проводил.
+            </p>
+            <p className="text-sm m-0">
+              Будущие события можно оставить без исполнителя для переназначения другому сотруднику или удалить вместе с ним.
+            </p>
+            <div className="row mt-1">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={employeeDeletingId === pendingEmployeeDelete.id}
+                onClick={() => void handleConfirmDeleteEmployee(false)}
+              >
+                Оставить без исполнителя
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={employeeDeletingId === pendingEmployeeDelete.id}
+                onClick={() => void handleConfirmDeleteEmployee(true)}
+              >
+                Удалить вместе с событиями
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={employeeDeletingId === pendingEmployeeDelete.id}
+                onClick={() => setPendingEmployeeDelete(null)}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {employeeLoadError && <p className="muted">{employeeLoadError}</p>}
       <div className="stack">
         {employees.map((employee) => (
@@ -335,7 +516,7 @@ export function CompanyPage() {
                 type="button"
                 className="btn btn-danger"
                 disabled={employeeDeletingId === employee.id}
-                onClick={() => void handleDeleteEmployee(employee.id)}
+                onClick={() => handleDeleteEmployee(employee)}
               >
                 {employeeDeletingId === employee.id ? 'Удаление…' : 'Удалить'}
               </button>

@@ -119,7 +119,15 @@ export function MyCalendarPage() {
           const end = new Date(b.slot!.endAt);
           const companyName = b.slot?.company?.name ?? 'Компания';
           const title = b.slot?.title ? `${companyName} — ${b.slot.title}` : companyName;
-          return { id: b.id, type: 'BOOKING' as const, start, end, title, subtitle: undefined, original: b };
+          return {
+            id: b.id,
+            type: 'BOOKING' as const,
+            start,
+            end,
+            title,
+            subtitle: b.slot?.employee?.name ? `Сотрудник: ${b.slot.employee.name}` : undefined,
+            original: b,
+          };
         });
       const fromEvents: CalendarItem[] = (eventsRes.data || []).map((e) => ({
         id: e.id,

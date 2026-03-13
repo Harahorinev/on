@@ -35,6 +35,8 @@ describe("POST /companies/:companyId/slots", () => {
   let companyToken: string;
   let companyId: string;
   let userToken: string;
+  let employeeId: string;
+  let otherEmployeeId: string;
 
   beforeAll(async () => {
     const company = createUser("slots-post-company@test.co", "123", "Co", "COMPANY");
@@ -46,6 +48,22 @@ describe("POST /companies/:companyId/slots", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ name: "Slots Post Company" });
     companyId = create.body.id;
+    const employee = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ name: "Employee One" });
+    employeeId = employee.body.id;
+    const otherCompany = createUser("slots-post-other-company@test.co", "123", "Other Company", "COMPANY");
+    const otherToken = signToken(otherCompany);
+    const otherCompanyRes = await request(app)
+      .post("/companies")
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({ name: "Other Slots Company" });
+    const otherEmployee = await request(app)
+      .post(`/companies/${otherCompanyRes.body.id}/employees`)
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({ name: "Foreign Employee" });
+    otherEmployeeId = otherEmployee.body.id;
   });
 
   const futureStart = new Date(Date.now() + 3600000).toISOString();
@@ -107,6 +125,35 @@ describe("POST /companies/:companyId/slots", () => {
     expect(res.body.companyId).toBe(companyId);
     expect(res.body.capacity).toBe(2);
     expect(res.body.status).toBe("OPEN");
+    expect(res.body.employeeId).toBeUndefined();
+  });
+
+  it("returns 201 and assigned employee when employeeId is valid", async () => {
+    const res = await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({
+        startAt: new Date(Date.now() + 10800000).toISOString(),
+        endAt: new Date(Date.now() + 14400000).toISOString(),
+        capacity: 1,
+        employeeId,
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.employeeId).toBe(employeeId);
+    expect(res.body.employee.name).toBe("Employee One");
+  });
+
+  it("returns 400 when employee belongs to another company", async () => {
+    const res = await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({
+        startAt: new Date(Date.now() + 18000000).toISOString(),
+        endAt: new Date(Date.now() + 21600000).toISOString(),
+        capacity: 1,
+        employeeId: otherEmployeeId,
+      });
+    expect(res.status).toBe(400);
   });
 });
 
@@ -149,6 +196,7 @@ describe("PATCH and DELETE /companies/:companyId/slots/:slotId", () => {
   let companyId: string;
   let slotId: string;
   let otherToken: string;
+  let employeeId: string;
 
   beforeAll(async () => {
     const company = createUser("slots-patch-company@test.co", "123", "Co", "COMPANY");
@@ -159,6 +207,11 @@ describe("PATCH and DELETE /companies/:companyId/slots/:slotId", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ name: "Slots Patch Company" });
     companyId = createCo.body.id;
+    const employee = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ name: "Patch Employee" });
+    employeeId = employee.body.id;
     const start = new Date(Date.now() + 3600000).toISOString();
     const end = new Date(Date.now() + 7200000).toISOString();
     const createSlot = await request(app)
@@ -191,10 +244,20 @@ describe("PATCH and DELETE /companies/:companyId/slots/:slotId", () => {
     const res = await request(app)
       .patch(`/companies/${companyId}/slots/${slotId}`)
       .set("Authorization", `Bearer ${companyToken}`)
-      .send({ title: "Updated Title", status: "CLOSED" });
+      .send({ title: "Updated Title", status: "CLOSED", employeeId });
     expect(res.status).toBe(200);
     expect(res.body.title).toBe("Updated Title");
     expect(res.body.status).toBe("CLOSED");
+    expect(res.body.employeeId).toBe(employeeId);
+  });
+
+  it("PATCH allows unassigning employee later", async () => {
+    const res = await request(app)
+      .patch(`/companies/${companyId}/slots/${slotId}`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ employeeId: null });
+    expect(res.status).toBe(200);
+    expect(res.body.employeeId).toBeUndefined();
   });
 
   it("DELETE returns 204", async () => {
@@ -215,5 +278,53 @@ describe("PATCH and DELETE /companies/:companyId/slots/:slotId", () => {
       .delete(`/companies/${companyId}/slots/unknown-slot`)
       .set("Authorization", `Bearer ${companyToken}`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /companies/:companyId/slots filtering", () => {
+  let companyToken: string;
+  let companyId: string;
+  let employeeId: string;
+
+  beforeAll(async () => {
+    const company = createUser("slots-filter-company@test.co", "123", "Filter Co", "COMPANY");
+    companyToken = signToken(company);
+    const createCo = await request(app)
+      .post("/companies")
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ name: "Slots Filter Company" });
+    companyId = createCo.body.id;
+    const employee = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ name: "Filter Employee" });
+    employeeId = employee.body.id;
+    await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({
+        startAt: new Date(Date.now() + 3600000).toISOString(),
+        endAt: new Date(Date.now() + 7200000).toISOString(),
+        capacity: 1,
+        title: "Assigned Slot",
+        employeeId,
+      });
+    await request(app)
+      .post(`/companies/${companyId}/slots`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({
+        startAt: new Date(Date.now() + 10800000).toISOString(),
+        endAt: new Date(Date.now() + 14400000).toISOString(),
+        capacity: 1,
+        title: "Unassigned Slot",
+      });
+  });
+
+  it("filters slots by employeeId", async () => {
+    const res = await request(app).get(`/companies/${companyId}/slots?employeeId=${employeeId}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].title).toBe("Assigned Slot");
+    expect(res.body[0].employeeId).toBe(employeeId);
   });
 });

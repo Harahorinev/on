@@ -129,6 +129,7 @@ export function CompanySchedulePage() {
                   <p className="text-muted">
                     {start.toLocaleString('ru')} – {end.toLocaleString('ru')}
                   </p>
+                  <p className="text-sm m-0">Сотрудник: {slot.employee?.name ?? 'Не назначен'}</p>
                   {slot.description && <p className="text-xs m-0">{slot.description}</p>}
                   <p className="text-sm mt-half m-0">
                     Статус: {SLOT_STATUS_LABEL[slot.status]}

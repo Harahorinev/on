@@ -182,6 +182,7 @@ describe("GET /companies/:id/export", () => {
   let otherToken: string;
   let companyId: string;
   let slotId: string;
+  let employeeId: string;
 
   beforeAll(async () => {
     const owner = createUser("comp-export-owner@test.co", "123", "Owner", "COMPANY");
@@ -193,13 +194,18 @@ describe("GET /companies/:id/export", () => {
       .set("Authorization", `Bearer ${ownerToken}`)
       .send({ name: "Export Co" });
     companyId = create.body.id;
+    const employeeRes = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Export Employee" });
+    employeeId = employeeRes.body.id;
 
     const start = new Date(Date.now() + 3600000).toISOString();
     const end = new Date(Date.now() + 7200000).toISOString();
     const slotRes = await request(app)
       .post(`/companies/${companyId}/slots`)
       .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ startAt: start, endAt: end, capacity: 3, title: "Consultation", location: "Room 1" });
+      .send({ startAt: start, endAt: end, capacity: 3, title: "Consultation", location: "Room 1", employeeId });
     slotId = slotRes.body.id;
   });
 
@@ -228,8 +234,9 @@ describe("GET /companies/:id/export", () => {
       .set("Authorization", `Bearer ${ownerToken}`);
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("text/csv");
-    expect(res.text).toContain("slot_id,start_at,end_at,status,capacity,title,location,confirmed_bookings,cancelled_bookings");
+    expect(res.text).toContain("slot_id,start_at,end_at,status,capacity,title,location,employee_name,confirmed_bookings,cancelled_bookings");
     expect(res.text).toContain(slotId);
+    expect(res.text).toContain("Export Employee");
   });
 
   it("returns iCal export", async () => {
@@ -249,6 +256,7 @@ describe("GET /companies/:id/bookings", () => {
   let otherCompanyToken: string;
   let userToken: string;
   let companyId: string;
+  let employeeId: string;
 
   beforeAll(async () => {
     const owner = createUser("comp-bookings-owner@test.co", "123", "Owner", "COMPANY");
@@ -263,13 +271,18 @@ describe("GET /companies/:id/bookings", () => {
       .set("Authorization", `Bearer ${ownerToken}`)
       .send({ name: "Bookings Co" });
     companyId = companyRes.body.id;
+    const employeeRes = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Bookings Employee" });
+    employeeId = employeeRes.body.id;
 
     const start = new Date(Date.now() + 3600000).toISOString();
     const end = new Date(Date.now() + 7200000).toISOString();
     const slotRes = await request(app)
       .post(`/companies/${companyId}/slots`)
       .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ startAt: start, endAt: end, capacity: 2, title: "Visit" });
+      .send({ startAt: start, endAt: end, capacity: 2, title: "Visit", employeeId });
 
     await request(app)
       .post(`/slots/${slotRes.body.id}/bookings`)
@@ -310,5 +323,16 @@ describe("GET /companies/:id/bookings", () => {
       user: { id: expect.any(String), email: expect.any(String), name: expect.any(String) },
       slot: { id: expect.any(String), startAt: expect.any(String), endAt: expect.any(String) },
     });
+    expect(res.body[0].slot.employeeId).toBe(employeeId);
+    expect(res.body[0].slot.employee.name).toBe("Bookings Employee");
+  });
+
+  it("filters bookings by employeeId", async () => {
+    const res = await request(app)
+      .get(`/companies/${companyId}/bookings?employeeId=${employeeId}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].slot.employeeId).toBe(employeeId);
   });
 });

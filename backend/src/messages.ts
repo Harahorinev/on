@@ -69,6 +69,7 @@ export const msg = {
   slot_endAfterStart: "Время окончания должно быть позже начала",
   slot_startNotInPast: "Время начала не может быть в прошлом",
   slot_invalidStatus: "Неверный статус",
+  slot_employeeInvalid: "employeeId должен ссылаться на сотрудника этой компании",
 
   // Bookings
   booking_notFound: "Бронирование не найдено",

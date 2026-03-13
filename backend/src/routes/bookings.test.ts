@@ -29,6 +29,7 @@ describe("POST /slots/:slotId/bookings", () => {
   let userToken: string;
   let companyToken: string;
   let slotId: string;
+  let employeeId: string;
 
   beforeAll(async () => {
     const user = createUser("book-post-user@test.co", "123", "User", "USER");
@@ -40,12 +41,17 @@ describe("POST /slots/:slotId/bookings", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ name: "Bookings Company" });
     const companyId = createCo.body.id;
+    const employee = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ name: "Booking Employee" });
+    employeeId = employee.body.id;
     const start = new Date(Date.now() + 3600000).toISOString();
     const end = new Date(Date.now() + 7200000).toISOString();
     const slot = await request(app)
       .post(`/companies/${companyId}/slots`)
       .set("Authorization", `Bearer ${companyToken}`)
-      .send({ startAt: start, endAt: end, capacity: 2 });
+      .send({ startAt: start, endAt: end, capacity: 2, employeeId });
     slotId = slot.body.id;
   });
 
@@ -79,6 +85,8 @@ describe("POST /slots/:slotId/bookings", () => {
     expect(res.body.slotId).toBe(slotId);
     expect(res.body.userId).toBeTruthy();
     expect(res.body.status).toBe("CONFIRMED");
+    expect(res.body.slot.employeeId).toBe(employeeId);
+    expect(res.body.slot.employee.name).toBe("Booking Employee");
   });
 
   it("returns 409 when already booked", async () => {
@@ -94,6 +102,7 @@ describe("GET /bookings/:id and DELETE /bookings/:id", () => {
   let userToken: string;
   let otherUserToken: string;
   let bookingId: string;
+  let employeeId: string;
 
   beforeAll(async () => {
     const user = createUser("book-get-user@test.co", "123", "User", "USER");
@@ -107,12 +116,17 @@ describe("GET /bookings/:id and DELETE /bookings/:id", () => {
       .set("Authorization", `Bearer ${companyToken}`)
       .send({ name: "Book Get Company" });
     const companyId = createCo.body.id;
+    const employee = await request(app)
+      .post(`/companies/${companyId}/employees`)
+      .set("Authorization", `Bearer ${companyToken}`)
+      .send({ name: "Book Get Employee" });
+    employeeId = employee.body.id;
     const start = new Date(Date.now() + 3600000).toISOString();
     const end = new Date(Date.now() + 7200000).toISOString();
     const slot = await request(app)
       .post(`/companies/${companyId}/slots`)
       .set("Authorization", `Bearer ${companyToken}`)
-      .send({ startAt: start, endAt: end, capacity: 2 });
+      .send({ startAt: start, endAt: end, capacity: 2, employeeId });
     const book = await request(app)
       .post(`/slots/${slot.body.id}/bookings`)
       .set("Authorization", `Bearer ${userToken}`);
@@ -144,6 +158,8 @@ describe("GET /bookings/:id and DELETE /bookings/:id", () => {
       .set("Authorization", `Bearer ${userToken}`);
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(bookingId);
+    expect(res.body.slot.employeeId).toBe(employeeId);
+    expect(res.body.slot.employee.name).toBe("Book Get Employee");
   });
 
   it("DELETE returns 403 when other user", async () => {

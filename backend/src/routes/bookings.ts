@@ -12,7 +12,7 @@ export const bookingsRouter = Router();
 
 function bookingToJson(
   row: BookingRow,
-  slot?: SlotRow & { company?: { id: string; name: string } }
+  slot?: SlotRow & { company?: { id: string; name: string }; employee?: { id: string; name: string } }
 ) {
   const out: {
     id: string;
@@ -32,6 +32,7 @@ function bookingToJson(
     out.slot = {
       id: slot.id,
       companyId: slot.company_id,
+      employeeId: slot.employee_id ?? undefined,
       startAt: slot.start_at,
       endAt: slot.end_at,
       capacity: slot.capacity,
@@ -40,6 +41,7 @@ function bookingToJson(
       description: slot.description ?? undefined,
       location: slot.location ?? undefined,
       ...(slot.company && { company: slot.company }),
+      ...(slot.employee && { employee: slot.employee }),
     };
   }
   return out;
@@ -48,11 +50,13 @@ function bookingToJson(
 bookingsRouter.get("/me", authMiddleware, (req, res) => {
   const rows = db
     .prepare(
-      `SELECT b.*, s.id as s_id, s.company_id, s.start_at, s.end_at, s.capacity, s.status as s_status, s.title, s.description, s.location,
-              c.id as c_id, c.name as c_name
+      `SELECT b.*, s.id as s_id, s.company_id, s.employee_id, s.start_at, s.end_at, s.capacity, s.status as s_status, s.title, s.description, s.location,
+              c.id as c_id, c.name as c_name,
+              e.id as e_id, e.name as e_name
        FROM bookings b
        JOIN slots s ON b.slot_id = s.id
        JOIN companies c ON s.company_id = c.id
+       LEFT JOIN employees e ON s.employee_id = e.id
        WHERE b.user_id = ? AND b.status = 'CONFIRMED'
        ORDER BY b.created_at DESC`
     )
@@ -61,6 +65,7 @@ bookingsRouter.get("/me", authMiddleware, (req, res) => {
     bookingToJson(r, {
       id: r.s_id,
       company_id: r.company_id,
+      employee_id: r.employee_id,
       start_at: r.start_at,
       end_at: r.end_at,
       capacity: r.capacity,
@@ -69,6 +74,7 @@ bookingsRouter.get("/me", authMiddleware, (req, res) => {
       description: r.description,
       location: r.location,
       company: { id: r.c_id, name: r.c_name },
+      employee: r.e_id ? { id: r.e_id, name: r.e_name ?? "" } : undefined,
     })
   );
   res.json(bookings);
@@ -77,11 +83,13 @@ bookingsRouter.get("/me", authMiddleware, (req, res) => {
 bookingsRouter.get("/:id", authMiddleware, (req, res, next) => {
   const row = db
     .prepare(
-      `SELECT b.*, s.id as s_id, s.company_id, s.start_at, s.end_at, s.capacity, s.status as s_status, s.title, s.description, s.location,
-              c.id as c_id, c.name as c_name
+      `SELECT b.*, s.id as s_id, s.company_id, s.employee_id, s.start_at, s.end_at, s.capacity, s.status as s_status, s.title, s.description, s.location,
+              c.id as c_id, c.name as c_name,
+              e.id as e_id, e.name as e_name
        FROM bookings b
        JOIN slots s ON b.slot_id = s.id
        JOIN companies c ON s.company_id = c.id
+       LEFT JOIN employees e ON s.employee_id = e.id
        WHERE b.id = ?`
     )
     .get(req.params.id) as BookingJoinedRow | undefined;
@@ -97,6 +105,7 @@ bookingsRouter.get("/:id", authMiddleware, (req, res, next) => {
     bookingToJson(row, {
       id: row.s_id,
       company_id: row.company_id,
+      employee_id: row.employee_id,
       start_at: row.start_at,
       end_at: row.end_at,
       capacity: row.capacity,
@@ -105,6 +114,7 @@ bookingsRouter.get("/:id", authMiddleware, (req, res, next) => {
       description: row.description,
       location: row.location,
       company: { id: row.c_id, name: row.c_name },
+      employee: row.e_id ? { id: row.e_id, name: row.e_name ?? "" } : undefined,
     })
   );
 });
@@ -146,10 +156,16 @@ export function createBookingForSlot(req: express.Request, res: express.Response
   }
   const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(bookingId) as BookingRow;
   const c = db.prepare("SELECT id, name FROM companies WHERE id = ?").get(slot.company_id) as { id: string; name: string };
+  const employee = slot.employee_id
+    ? ((db.prepare("SELECT id, name FROM employees WHERE id = ?").get(slot.employee_id) as
+        | { id: string; name: string }
+        | undefined) ?? undefined)
+    : undefined;
   res.status(201).json(
     bookingToJson(row, {
       ...slot,
       company: c,
+      employee,
     })
   );
   void sendBookingEmailNotification(bookingId, "booking_created").catch((err) => {
@@ -170,8 +186,13 @@ bookingsRouter.delete("/:id", authMiddleware, (req, res, next) => {
   db.prepare("UPDATE bookings SET status = 'CANCELLED' WHERE id = ?").run(req.params.id);
   const slot = db.prepare("SELECT * FROM slots WHERE id = ?").get(row.slot_id) as SlotRow;
   const c = db.prepare("SELECT id, name FROM companies WHERE id = ?").get(slot.company_id) as { id: string; name: string };
+  const employee = slot.employee_id
+    ? ((db.prepare("SELECT id, name FROM employees WHERE id = ?").get(slot.employee_id) as
+        | { id: string; name: string }
+        | undefined) ?? undefined)
+    : undefined;
   const updated = db.prepare("SELECT * FROM bookings WHERE id = ?").get(req.params.id) as BookingRow;
-  res.json(bookingToJson(updated, { ...slot, company: c }));
+  res.json(bookingToJson(updated, { ...slot, company: c, employee }));
   void sendBookingEmailNotification(updated.id, "booking_cancelled").catch((err) => {
     logger.error({ err, bookingId: updated.id }, "Failed to send booking cancelled email notification");
   });
