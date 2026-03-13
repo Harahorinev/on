@@ -26,11 +26,23 @@ type ApiErrorShape = {
   code?: string;
 };
 
+const LEGACY_API_ERROR_RU: Record<string, string> = {
+  'Email already registered': 'Этот email уже зарегистрирован',
+  'email and password required': 'Укажите email и пароль',
+  'Invalid email or password': 'Неверный email или пароль',
+  'email, password, name, role required': 'Укажите email, пароль, имя и роль',
+  'role must be USER or COMPANY': 'Роль должна быть USER или COMPANY',
+  'password at least 6 characters': 'Пароль не менее 6 символов',
+};
+
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
     const e = err as ApiErrorShape;
     const apiMsg = e.response?.data?.message;
-    if (typeof apiMsg === 'string' && apiMsg.trim()) return apiMsg.trim();
+    if (typeof apiMsg === 'string' && apiMsg.trim()) {
+      const normalized = apiMsg.trim();
+      return LEGACY_API_ERROR_RU[normalized] ?? normalized;
+    }
     if (e.response?.status) return `Ошибка сервера (${e.response.status})`;
     const msg = typeof e.message === 'string' ? e.message : '';
     const lower = msg.toLowerCase();
