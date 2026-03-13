@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';
-import { userApi, type UserPreferences } from '../lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { userApi, type UserPreferences } from '@/lib/api';
 
 type NotificationKind = 'success';
 

@@ -1,8 +1,8 @@
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
-import { Layout } from './components/Layout';
-import { AppRoutes } from './routes';
+import { Layout } from '@/components/Layout';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
+import { AppRoutes } from '@/routes';
 
 function App() {
   return (

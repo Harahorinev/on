@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import federation from '@originjs/vite-plugin-federation';
+import { fileURLToPath, URL } from 'node:url';
 const getRemoteUrl = (envKey, port) => {
     const env = process.env[envKey];
     if (env && typeof env === 'string' && env.trim())
@@ -11,6 +12,11 @@ const getRemoteUrl = (envKey, port) => {
 export default defineConfig(({ command }) => {
     const useLocalhost = command === 'serve';
     return {
+        resolve: {
+            alias: {
+                '@': fileURLToPath(new URL('./src', import.meta.url)),
+            },
+        },
         plugins: [
             react(),
             federation({

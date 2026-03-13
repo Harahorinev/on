@@ -87,9 +87,7 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_employees_company ON employees(company_id);
 
-  /* B91: Join table for many-to-many: employees ↔ directions.
-   * employee_id will reference users(id) or a future employees table when B44/B50 (Employee entity) is implemented.
-   * Currently only used to clean up rows when a direction is deleted (see directions router). */
+  /* employees ↔ directions: many-to-many links used by employee CRUD and direction cleanup. */
   CREATE TABLE IF NOT EXISTS employee_directions (
     employee_id TEXT NOT NULL,
     direction_id TEXT NOT NULL REFERENCES directions(id),
@@ -180,13 +178,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id);
   CREATE INDEX IF NOT EXISTS idx_user_events_user ON user_events(user_id);
   CREATE INDEX IF NOT EXISTS idx_slots_company ON slots(company_id);
-  CREATE INDEX IF NOT EXISTS idx_slots_employee ON slots(employee_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_slot ON bookings(slot_id);
   CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
   CREATE INDEX IF NOT EXISTS idx_directions_company ON directions(company_id);
 `);
 
-// B74: Email verification flags. Added via ALTER to avoid breaking existing DBs.
 try {
   db.exec("ALTER TABLE employees ADD COLUMN deleted_at TEXT;");
 } catch {

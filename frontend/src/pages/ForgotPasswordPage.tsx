@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { authApi, getApiErrorMessage } from '../lib/api';
+import { authApi, getApiErrorMessage } from '@/lib/api';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');

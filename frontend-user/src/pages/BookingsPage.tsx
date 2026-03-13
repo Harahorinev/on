@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { bookingsApi } from '../lib/api';
-import type { Booking } from '../lib/api';
+import { ActionDialog } from '@/components/ActionDialog';
+import { bookingsApi, type Booking } from '@/lib/api';
 
 export interface BookingsPageProps {
   notifySuccess: (msg: string) => void;
@@ -12,6 +12,7 @@ export function BookingsPage({ notifySuccess }: BookingsPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [pendingCancelBooking, setPendingCancelBooking] = useState<Booking | null>(null);
 
   const load = useCallback(() => {
     bookingsApi
@@ -23,13 +24,13 @@ export function BookingsPage({ notifySuccess }: BookingsPageProps) {
 
   useEffect(() => load(), [load]);
 
-  const handleCancel = async (bookingId: string) => {
-    const confirmed = window.confirm('Вы уверены, что хотите отменить эту запись?');
-    if (!confirmed) return;
-    setCancellingId(bookingId);
+  const handleCancel = async () => {
+    if (!pendingCancelBooking) return;
+    setCancellingId(pendingCancelBooking.id);
     try {
-      await bookingsApi.cancel(bookingId);
+      await bookingsApi.cancel(pendingCancelBooking.id);
       notifySuccess('Запись отменена');
+      setPendingCancelBooking(null);
       load();
     } catch {
       setError('Не удалось отменить запись');
@@ -65,6 +66,7 @@ export function BookingsPage({ notifySuccess }: BookingsPageProps) {
                   <p className="text-muted">
                     {start && end ? `${start.toLocaleString('ru')} – ${end.toLocaleString('ru')}` : '—'}
                   </p>
+                  {slot?.employee?.name && <p className="text-sm m-0">Сотрудник: {slot.employee.name}</p>}
                   <p className="text-sm m-0">Статус: {b.status}</p>
                 </div>
                 {isBooked && (
@@ -72,7 +74,7 @@ export function BookingsPage({ notifySuccess }: BookingsPageProps) {
                     type="button"
                     className="btn btn-danger"
                     disabled={cancellingId === b.id}
-                    onClick={() => handleCancel(b.id)}
+                    onClick={() => setPendingCancelBooking(b)}
                   >
                     {cancellingId === b.id ? 'Отмена…' : 'Отменить запись'}
                   </button>
@@ -88,6 +90,26 @@ export function BookingsPage({ notifySuccess }: BookingsPageProps) {
           </p>
         )}
       </div>
+      {pendingCancelBooking && (
+        <ActionDialog
+          title="Отмена записи"
+          lines={['Вы уверены, что хотите отменить эту запись?']}
+          actions={[
+            {
+              label: cancellingId === pendingCancelBooking.id ? 'Отмена…' : 'Отменить запись',
+              variant: 'danger',
+              disabled: cancellingId === pendingCancelBooking.id,
+              onClick: () => void handleCancel(),
+            },
+            {
+              label: 'Закрыть',
+              variant: 'secondary',
+              disabled: cancellingId === pendingCancelBooking.id,
+              onClick: () => setPendingCancelBooking(null),
+            },
+          ]}
+        />
+      )}
     </>
   );
 }

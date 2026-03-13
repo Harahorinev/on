@@ -2,10 +2,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { MyCalendarPage } from './MyCalendarPage';
-import { bookingsApi, userEventsApi, userApi } from '../lib/api';
+import { bookingsApi, userApi, userEventsApi } from '@/lib/api';
+import { MyCalendarPage } from '@/pages/MyCalendarPage';
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   bookingsApi: { my: vi.fn() },
   userEventsApi: { list: vi.fn() },
   userApi: {

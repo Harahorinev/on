@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import App from './App';
+import App from '@/App';
 
 const onLogin = (token: string, user: { id: string; email: string; name: string; role: string }) => {
   localStorage.setItem('token', token);

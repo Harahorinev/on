@@ -40,28 +40,11 @@ type ApiErrorShape = {
   code?: string;
 };
 
-const API_ERROR_RU: Record<string, string> = {
-  'name required': 'Укажите название',
-  'You already have a company': 'У вас уже есть компания',
-  'Only COMPANY can create a company': 'Только компания может создать компанию',
-  'Slot not found': 'Слот не найден',
-  'startAt, endAt, capacity required': 'Укажите начало, окончание и вместимость',
-  'Invalid startAt or endAt': 'Неверный формат даты или времени',
-  'endAt must be after startAt': 'Время окончания должно быть позже начала',
-  'startAt cannot be in the past': 'Начало не может быть в прошлом',
-  'Company not found': 'Компания не найдена',
-  Unauthorized: 'Войдите в аккаунт',
-  'Not found': 'Не найдено',
-};
-
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
     const e = err as ApiErrorShape;
     const apiMsg = e.response?.data?.message;
-    if (typeof apiMsg === 'string') {
-      const ru = API_ERROR_RU[apiMsg.trim()];
-      return ru ?? apiMsg;
-    }
+    if (typeof apiMsg === 'string' && apiMsg.trim()) return apiMsg.trim();
     if (e.response?.status) return `Ошибка сервера (${e.response.status})`;
     const msg = typeof e.message === 'string' ? e.message : '';
     const lower = msg.toLowerCase();
@@ -91,10 +74,12 @@ export interface Company {
 }
 
 export type SlotStatus = 'OPEN' | 'CANCELLED' | 'CLOSED';
+export type SlotSortBy = 'startAt' | 'employeeName';
 
 export interface ScheduleSlot {
   id: string;
   companyId: string;
+  employeeId?: string;
   startAt: string;
   endAt: string;
   capacity: number;
@@ -103,7 +88,27 @@ export interface ScheduleSlot {
   description?: string;
   location?: string;
   company?: { id: string; name: string };
+  employee?: { id: string; name: string };
   bookings?: { id: string; userId: string }[];
+}
+
+export interface CompanyEmployee {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  photoUrl?: string;
+  directionIds?: string[];
+  createdAt?: string;
+}
+
+export interface Direction {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+  createdAt: string;
 }
 
 export const companiesApi = {
@@ -112,14 +117,60 @@ export const companiesApi = {
     api.post<Company>('/companies', data),
   update: (id: string, data: { name?: string; description?: string; timezone?: string }) =>
     api.patch<Company>(`/companies/${id}`, data),
+  exportScheduleCsv: (
+    id: string,
+    params?: { dateFrom?: string; dateTo?: string; employeeId?: string; sortBy?: SlotSortBy; sortOrder?: 'asc' | 'desc' }
+  ) =>
+    api.get<Blob>(`/companies/${id}/export`, { params: { format: 'csv', ...params }, responseType: 'blob' }),
 };
 
 export const slotsApi = {
-  list: (companyId: string) => api.get<ScheduleSlot[]>(`/companies/${companyId}/slots`),
-  create: (companyId: string, data: { startAt: string; endAt: string; capacity: number; title?: string; description?: string; location?: string }) =>
-    api.post<ScheduleSlot>(`/companies/${companyId}/slots`, data),
-  update: (companyId: string, slotId: string, data: Partial<{ startAt: string; endAt: string; capacity: number; status: string; title: string; description: string; location: string }>) =>
-    api.patch<ScheduleSlot>(`/companies/${companyId}/slots/${slotId}`, data),
-  delete: (companyId: string, slotId: string) =>
-    api.delete(`/companies/${companyId}/slots/${slotId}`),
+  list: (
+    companyId: string,
+    params?: { dateFrom?: string; dateTo?: string; employeeId?: string; sortBy?: SlotSortBy; sortOrder?: 'asc' | 'desc' }
+  ) => api.get<ScheduleSlot[]>(`/companies/${companyId}/slots`, { params }),
+  create: (
+    companyId: string,
+    data: {
+      startAt: string;
+      endAt: string;
+      capacity: number;
+      title?: string;
+      description?: string;
+      location?: string;
+      employeeId?: string | null;
+    }
+  ) => api.post<ScheduleSlot>(`/companies/${companyId}/slots`, data),
+  update: (
+    companyId: string,
+    slotId: string,
+    data: Partial<{
+      startAt: string;
+      endAt: string;
+      capacity: number;
+      status: string;
+      title: string;
+      description: string;
+      location: string;
+      employeeId: string | null;
+    }>
+  ) => api.patch<ScheduleSlot>(`/companies/${companyId}/slots/${slotId}`, data),
+  delete: (companyId: string, slotId: string) => api.delete(`/companies/${companyId}/slots/${slotId}`),
+};
+
+export const employeesApi = {
+  list: (companyId: string) => api.get<CompanyEmployee[]>(`/companies/${companyId}/employees`),
+  create: (companyId: string, data: { name: string; description?: string; photoUrl?: string; directionIds?: string[] }) =>
+    api.post<CompanyEmployee>(`/companies/${companyId}/employees`, data),
+  update: (
+    companyId: string,
+    employeeId: string,
+    data: { name?: string; description?: string; photoUrl?: string; directionIds?: string[] }
+  ) => api.patch<CompanyEmployee>(`/companies/${companyId}/employees/${employeeId}`, data),
+  delete: (companyId: string, employeeId: string, params?: { deleteFutureSlots?: boolean }) =>
+    api.delete(`/companies/${companyId}/employees/${employeeId}`, { params }),
+};
+
+export const directionsApi = {
+  list: (companyId: string) => api.get<Direction[]>(`/companies/${companyId}/directions`),
 };

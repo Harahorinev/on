@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
-import { ForgotPasswordPage } from './ForgotPasswordPage';
-import * as api from '../lib/api';
+import * as api from '@/lib/api';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   authApi: {
     forgotPassword: vi.fn(),
   },

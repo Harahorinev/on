@@ -5,6 +5,7 @@ import { AppError } from "../errors.js";
 import { msg } from "../messages.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
 import type { CompanyRowWithOwner } from "../db-types.js";
+import { buildCompanySlotWhere, ensureCompanyEmployee, getSlotOrderBy, slotToJson } from "../slotViews.js";
 
 export const companiesRouter = Router();
 
@@ -27,22 +28,6 @@ function icalTextEscape(value: string): string {
 
 function toIcalDate(iso: string): string {
   return iso.replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-}
-
-function ensureCompanyEmployee(companyId: string, employeeId?: string): boolean {
-  if (!employeeId) return true;
-  const row = db
-    .prepare("SELECT id FROM employees WHERE id = ? AND company_id = ?")
-    .get(employeeId, companyId) as { id: string } | undefined;
-  return Boolean(row);
-}
-
-function getSlotOrderBy(sortBy?: string, sortOrder?: string, defaultDirection: "ASC" | "DESC" = "ASC"): string {
-  const direction = sortOrder === "asc" || sortOrder === "desc" ? sortOrder.toUpperCase() : defaultDirection;
-  if (sortBy === "employeeName") {
-    return ` ORDER BY (e.name IS NULL), e.name ${direction}, s.start_at ASC`;
-  }
-  return ` ORDER BY s.start_at ${direction}`;
 }
 
 companiesRouter.get("/", (_req, res) => {
@@ -154,20 +139,7 @@ companiesRouter.get("/:id/bookings", authMiddleware, (req, res, next) => {
     return;
   }
 
-  let where = "WHERE s.company_id = ?";
-  const params: Array<string | number> = [req.params.id];
-  if (dateFrom) {
-    where += " AND s.start_at >= ?";
-    params.push(dateFrom);
-  }
-  if (dateTo) {
-    where += " AND s.end_at <= ?";
-    params.push(dateTo);
-  }
-  if (employeeId) {
-    where += " AND s.employee_id = ?";
-    params.push(employeeId);
-  }
+  const { where, params } = buildCompanySlotWhere({ companyId: req.params.id, dateFrom, dateTo, employeeId });
   const rows = db
     .prepare(
       `SELECT b.id as booking_id, b.slot_id, b.user_id, b.status as booking_status, b.created_at as booking_created_at,
@@ -215,18 +187,22 @@ companiesRouter.get("/:id/bookings", authMiddleware, (req, res, next) => {
         email: r.u_email,
         name: r.u_name,
       },
-      slot: {
-        id: r.s_id,
-        employeeId: r.employee_id ?? undefined,
-        startAt: r.start_at,
-        endAt: r.end_at,
-        status: r.slot_status,
-        capacity: r.capacity,
-        title: r.title ?? undefined,
-        description: r.description ?? undefined,
-        location: r.location ?? undefined,
-        ...(r.e_id && { employee: { id: r.e_id, name: r.e_name ?? "" } }),
-      },
+      slot: slotToJson(
+        {
+          id: r.s_id,
+          company_id: req.params.id,
+          employee_id: r.employee_id,
+          start_at: r.start_at,
+          end_at: r.end_at,
+          capacity: r.capacity,
+          status: r.slot_status,
+          title: r.title,
+          description: r.description,
+          location: r.location,
+        },
+        undefined,
+        r.e_id ? { id: r.e_id, name: r.e_name ?? "" } : null
+      ),
     }))
   );
 });
@@ -262,20 +238,7 @@ companiesRouter.get("/:id/export", authMiddleware, (req, res, next) => {
     next(new AppError(400, msg.slot_employeeInvalid));
     return;
   }
-  let where = "WHERE s.company_id = ?";
-  const params: Array<string | number> = [companyId];
-  if (dateFrom) {
-    where += " AND s.start_at >= ?";
-    params.push(dateFrom);
-  }
-  if (dateTo) {
-    where += " AND s.end_at <= ?";
-    params.push(dateTo);
-  }
-  if (employeeId) {
-    where += " AND s.employee_id = ?";
-    params.push(employeeId);
-  }
+  const { where, params } = buildCompanySlotWhere({ companyId, dateFrom, dateTo, employeeId });
   const rows = db
     .prepare(
       `SELECT s.id, s.start_at, s.end_at, s.status, s.capacity, s.title, s.location, e.name as employee_name,

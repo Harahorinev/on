@@ -3,10 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { ChatPage } from './ChatPage';
-import * as api from '../lib/api';
+import { ChatPage } from '@/pages/ChatPage';
+import * as api from '@/lib/api';
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   chatApi: {
     sendToAssistant: vi.fn(),
   },

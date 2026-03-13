@@ -23,23 +23,21 @@ api.interceptors.request.use((config) => {
 type ApiErrorShape = {
   response?: { data?: { message?: string }; status?: number };
   message?: string;
-};
-
-const API_ERROR_RU: Record<string, string> = {
-  'email, password, name, role required': 'Укажите email, пароль, имя и роль',
-  'role must be USER or COMPANY': 'Роль должна быть USER или COMPANY',
-  'password at least 6 characters': 'Пароль не менее 6 символов',
-  'Email already registered': 'Этот email уже зарегистрирован',
-  'email and password required': 'Укажите email и пароль',
-  'Invalid email or password': 'Неверный email или пароль',
+  code?: string;
 };
 
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
     const e = err as ApiErrorShape;
     const apiMsg = e.response?.data?.message;
-    if (typeof apiMsg === 'string') return API_ERROR_RU[apiMsg.trim()] ?? apiMsg;
+    if (typeof apiMsg === 'string' && apiMsg.trim()) return apiMsg.trim();
     if (e.response?.status) return `Ошибка сервера (${e.response.status})`;
+    const msg = typeof e.message === 'string' ? e.message : '';
+    const lower = msg.toLowerCase();
+    if (e.code === 'ERR_NETWORK' || lower.includes('network error')) {
+      return 'Не удалось подключиться к серверу. Проверьте интернет или попробуйте позже.';
+    }
+    if (msg) return msg;
   }
   return fallback;
 }

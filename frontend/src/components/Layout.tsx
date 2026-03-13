@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { ChatWidget } from './ChatWidget';
+import { ChatWidget } from '@/components/ChatWidget';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();

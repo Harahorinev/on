@@ -1,13 +1,13 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { CreateCompanyForm } from './CreateCompanyForm';
+import { CreateCompanyForm } from '@/components/CreateCompanyForm';
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   companiesApi: { create: vi.fn() },
   getApiErrorMessage: (_: unknown, fallback: string) => fallback,
 }));
-vi.mock('../contexts/NotificationContext', () => ({
+vi.mock('@/contexts/NotificationContext', () => ({
   useNotifications: () => ({ notifySuccess: vi.fn() }),
 }));
 

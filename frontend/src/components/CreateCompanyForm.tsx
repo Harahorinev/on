@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { companiesApi, getApiErrorMessage } from '../lib/api';
-import { useNotifications } from '../contexts/NotificationContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { companiesApi, getApiErrorMessage } from '@/lib/api';
 
 export function CreateCompanyForm({
   onSuccess,

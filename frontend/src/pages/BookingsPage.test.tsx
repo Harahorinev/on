@@ -2,14 +2,13 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import type { Booking } from '../lib/api';
-import { BookingsPage } from './BookingsPage';
-import { bookingsApi } from '../lib/api';
+import { BookingsPage } from '@/pages/BookingsPage';
+import { bookingsApi, type Booking } from '@/lib/api';
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   bookingsApi: { my: vi.fn(), cancel: vi.fn() },
 }));
-vi.mock('../contexts/NotificationContext', () => ({
+vi.mock('@/contexts/NotificationContext', () => ({
   useNotifications: () => ({ notifySuccess: vi.fn() }),
 }));
 

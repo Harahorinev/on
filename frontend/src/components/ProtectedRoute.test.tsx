@@ -2,10 +2,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { ProtectedRoute } from './ProtectedRoute';
-import { useAuth } from '../contexts/AuthContext';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
-vi.mock('../contexts/AuthContext');
+vi.mock('@/contexts/AuthContext');
 
 function wrap(ui: React.ReactElement, initialEntry = '/') {
   return render(

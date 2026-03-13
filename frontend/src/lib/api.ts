@@ -39,67 +39,11 @@ type ApiErrorShape = {
   message?: string;
   code?: string;
 };
-
-/** Перевод сообщений об ошибках с бэкенда (англ → рус). */
-const API_ERROR_RU: Record<string, string> = {
-  'email, password, name, role required': 'Укажите email, пароль, имя и роль',
-  'role must be USER or COMPANY': 'Роль должна быть USER или COMPANY',
-  'password at least 6 characters': 'Пароль не менее 6 символов',
-  'Email already registered': 'Этот email уже зарегистрирован',
-  'Database path invalid or not writable. Check DB_PATH and permissions.': 'Ошибка доступа к базе данных. Проверьте DB_PATH и права.',
-  'Registration failed': 'Ошибка регистрации',
-  'email and password required': 'Укажите email и пароль',
-  'Invalid email or password': 'Неверный email или пароль',
-  Unauthorized: 'Войдите в аккаунт',
-  'Invalid or expired token': 'Сессия истекла. Войдите снова.',
-  'User not found': 'Пользователь не найден',
-  'Not found': 'Не найдено',
-  'Company not found': 'Компания не найдена',
-  'Only COMPANY can create a company': 'Только компания может создать компанию',
-  'name required': 'Укажите название',
-  'You already have a company': 'У вас уже есть компания',
-  Forbidden: 'Доступ запрещён',
-  'Slot not found': 'Слот не найден',
-  'companyId required': 'Укажите компанию',
-  'startAt, endAt, capacity required': 'Укажите начало, окончание и вместимость',
-  'Invalid startAt or endAt': 'Неверный формат даты или времени',
-  'endAt must be after startAt': 'Время окончания должно быть позже начала',
-  'startAt cannot be in the past': 'Начало не может быть в прошлом',
-  'Invalid status': 'Недопустимый статус',
-  'Booking not found': 'Запись не найдена',
-  'Only USER can create bookings': 'Только пользователь может записываться на слоты',
-  'Slot is not available': 'Слот недоступен',
-  'Already booked': 'Вы уже записаны на этот слот',
-  'Slot is full': 'Слот заполнен',
-  'Only USER can have personal events': 'Только пользователь может просматривать личные события',
-  'Only USER can create personal events': 'Только пользователь может создавать личные события',
-  'title required': 'Укажите название',
-  'startAt and endAt required': 'Укажите начало и окончание',
-  'title must be non-empty': 'Название не должно быть пустым',
-  'Invalid startAt': 'Неверная дата начала',
-  'Invalid endAt': 'Неверная дата окончания',
-  'Event not found': 'Событие не найдено',
-  'Direction not found': 'Направление не найдено',
-  'Only COMPANY can manage directions': 'Только компания может управлять направлениями',
-  'name must be non-empty': 'Название не должно быть пустым',
-  'currentPassword and newPassword required': 'Укажите текущий и новый пароль',
-  'newPassword at least 6 characters': 'Новый пароль не менее 6 символов',
-  'Current password is incorrect': 'Текущий пароль неверный',
-  'notifyEmail must be boolean': 'Уведомления по email: да/нет',
-  'notifyInApp must be boolean': 'Уведомления в приложении: да/нет',
-  'calendarView must be week or month': 'Вид календаря: неделя или месяц',
-  'calendarRange must be 7, 14, or 30': 'Период календаря: 7, 14 или 30 дней',
-};
-
-/** Из ошибки API достаёт понятное сообщение на русском (в т.ч. перевод с бэка и сетевые сбои). */
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
     const e = err as ApiErrorShape;
     const apiMsg = e.response?.data?.message;
-    if (typeof apiMsg === 'string') {
-      const ru = API_ERROR_RU[apiMsg.trim()];
-      return ru ?? apiMsg;
-    }
+    if (typeof apiMsg === 'string' && apiMsg.trim()) return apiMsg.trim();
 
     if (e.response) {
       if (e.response.status) return `Ошибка сервера (${e.response.status})`;

@@ -1,10 +1,10 @@
 import { Routes, Route } from 'react-router-dom';
-import type { User } from './lib/api';
-import { CompaniesPage } from './pages/CompaniesPage';
-import { CompanySchedulePage } from './pages/CompanySchedulePage';
-import { BookingsPage } from './pages/BookingsPage';
-import { MyCalendarPage } from './pages/MyCalendarPage';
-import { SettingsPage } from './pages/SettingsPage';
+import type { User } from '@/lib/api';
+import { BookingsPage } from '@/pages/BookingsPage';
+import { CompaniesPage } from '@/pages/CompaniesPage';
+import { CompanySchedulePage } from '@/pages/CompanySchedulePage';
+import { MyCalendarPage } from '@/pages/MyCalendarPage';
+import { SettingsPage } from '@/pages/SettingsPage';
 
 export interface UserAppProps {
   user: User | null;

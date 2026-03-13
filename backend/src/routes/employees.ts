@@ -5,6 +5,7 @@ import type { EmployeeRow } from "../db-types.js";
 import { AppError } from "../errors.js";
 import { msg } from "../messages.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
+import { deleteEmployeeAndHandleFutureSlots } from "../employeeLifecycle.js";
 
 export const employeesRouter = Router({ mergeParams: true });
 
@@ -233,31 +234,6 @@ employeesRouter.delete("/:employeeId", (req: Request, res: Response, next: NextF
     next(new AppError(404, msg.employee_notFound));
     return;
   }
-  const nowIso = new Date().toISOString();
-  const deleteEmployeeTx = db.transaction(() => {
-    if (deleteFutureSlots) {
-      db.prepare(
-        `DELETE FROM bookings
-         WHERE slot_id IN (
-           SELECT id FROM slots
-           WHERE company_id = ? AND employee_id = ? AND end_at >= ?
-         )`
-      ).run(companyId, employeeId, nowIso);
-      db.prepare("DELETE FROM slots WHERE company_id = ? AND employee_id = ? AND end_at >= ?").run(
-        companyId,
-        employeeId,
-        nowIso
-      );
-    }
-    // Future slots become available for reassignment, but past slots keep the original employee for history.
-    db.prepare("UPDATE slots SET employee_id = NULL WHERE company_id = ? AND employee_id = ? AND end_at >= ?").run(
-      companyId,
-      employeeId,
-      nowIso
-    );
-    db.prepare("DELETE FROM employee_directions WHERE employee_id = ?").run(employeeId);
-    db.prepare("UPDATE employees SET deleted_at = ? WHERE id = ?").run(nowIso, employeeId);
-  });
-  deleteEmployeeTx();
+  deleteEmployeeAndHandleFutureSlots({ companyId, employeeId, deleteFutureSlots });
   res.status(204).send();
 });

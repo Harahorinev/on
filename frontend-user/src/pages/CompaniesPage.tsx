@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { companiesApi } from '../lib/api';
-import type { Company } from '../lib/api';
+import { companiesApi, type Company } from '@/lib/api';
 
 export function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);

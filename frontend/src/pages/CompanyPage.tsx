@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { companiesApi, directionsApi, employeesApi, getApiErrorMessage, slotsApi } from '../lib/api';
-import type { Company, CompanyEmployee, Direction, ScheduleSlot, SlotSortBy, SlotStatus } from '../lib/api';
-import { CreateCompanyForm } from '../components/CreateCompanyForm';
-import { CreateSlotForm } from '../components/CreateSlotForm';
-
-const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
-  OPEN: 'Открыт',
-  CANCELLED: 'Отменён',
-  CLOSED: 'Закрыт',
-};
-
-function dateFromToISO(dateStr: string, endOfDay: boolean): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-  return date.toISOString();
-}
+import { CreateCompanyForm } from '@/components/CreateCompanyForm';
+import { CreateSlotForm } from '@/components/CreateSlotForm';
+import { DeleteEmployeeDialog } from '@/components/company/DeleteEmployeeDialog';
+import { EmployeeSection } from '@/components/company/EmployeeSection';
+import { SlotFilters } from '@/components/company/SlotFilters';
+import { SlotList } from '@/components/company/SlotList';
+import { useAuth } from '@/contexts/AuthContext';
+import { companiesApi, directionsApi, employeesApi, getApiErrorMessage, slotsApi } from '@/lib/api';
+import type { Company, CompanyEmployee, Direction, ScheduleSlot, SlotSortBy } from '@/lib/api';
+import { buildSlotQueryParams } from '@/lib/slotQuery';
 
 export function CompanyPage() {
   const { user } = useAuth();
@@ -45,19 +38,28 @@ export function CompanyPage() {
   const [slotSortOrder, setSlotSortOrder] = useState<'asc' | 'desc'>('asc');
   const [slotUpdatingId, setSlotUpdatingId] = useState<string | null>(null);
 
+  const resetEmployeeForm = useCallback(() => {
+    setEditingEmployeeId(null);
+    setShowEmployeeForm(false);
+    setEmployeeSaveError('');
+    setEmployeeName('');
+    setEmployeeDescription('');
+    setEmployeeDirectionIds([]);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setEmployeeLoadError('');
     try {
       const companyRes = await companiesApi.getMy();
       setCompany(companyRes.data);
-      const slotParams = {
-        dateFrom: slotDateFrom ? dateFromToISO(slotDateFrom, false) : undefined,
-        dateTo: slotDateTo ? dateFromToISO(slotDateTo, true) : undefined,
+      const slotParams = buildSlotQueryParams({
+        dateFrom: slotDateFrom,
+        dateTo: slotDateTo,
         employeeId: slotEmployeeFilterId || undefined,
         sortBy: slotSortBy,
         sortOrder: slotSortOrder,
-      };
+      });
       const [slotsRes, employeesRes, directionsRes] = await Promise.allSettled([
         slotsApi.list(companyRes.data.id, slotParams),
         employeesApi.list(companyRes.data.id),
@@ -108,13 +110,13 @@ export function CompanyPage() {
     setError('');
     setExportLoading(true);
     try {
-      const response = await companiesApi.exportScheduleCsv(company.id, {
-        dateFrom: slotDateFrom ? dateFromToISO(slotDateFrom, false) : undefined,
-        dateTo: slotDateTo ? dateFromToISO(slotDateTo, true) : undefined,
+      const response = await companiesApi.exportScheduleCsv(company.id, buildSlotQueryParams({
+        dateFrom: slotDateFrom,
+        dateTo: slotDateTo,
         employeeId: slotEmployeeFilterId || undefined,
         sortBy: slotSortBy,
         sortOrder: slotSortOrder,
-      });
+      }));
       const blobUrl = window.URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -176,8 +178,7 @@ export function CompanyPage() {
       setEmployeeName('');
       setEmployeeDescription('');
       setEmployeeDirectionIds([]);
-      setShowEmployeeForm(false);
-      setEditingEmployeeId(null);
+      resetEmployeeForm();
     } catch (err: unknown) {
       setEmployeeSaveError(getApiErrorMessage(err, 'Не удалось сохранить сотрудника'));
     } finally {
@@ -209,11 +210,7 @@ export function CompanyPage() {
       await employeesApi.delete(company.id, employeeId, { deleteFutureSlots });
       setEmployees((prev) => prev.filter((e) => e.id !== employeeId));
       if (editingEmployeeId === employeeId) {
-        setEditingEmployeeId(null);
-        setShowEmployeeForm(false);
-        setEmployeeName('');
-        setEmployeeDescription('');
-        setEmployeeDirectionIds([]);
+        resetEmployeeForm();
       }
       setPendingEmployeeDelete(null);
       await load();
@@ -283,248 +280,65 @@ export function CompanyPage() {
           </button>
         </div>
       )}
-      <div className="card mb-1">
-        <p className="text-sm mt-0 mb-half text-muted">Фильтры и сортировка слотов</p>
-        <div className="filter-row">
-          <div className="form-group mb-0">
-            <label htmlFor="slot-filter-employee">Сотрудник</label>
-            <select
-              id="slot-filter-employee"
-              value={slotEmployeeFilterId}
-              onChange={(e) => setSlotEmployeeFilterId(e.target.value)}
-            >
-              <option value="">Все сотрудники и неназначенные</option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group mb-0">
-            <label htmlFor="slot-filter-date-from">С</label>
-            <input
-              id="slot-filter-date-from"
-              type="date"
-              value={slotDateFrom}
-              onChange={(e) => setSlotDateFrom(e.target.value)}
-            />
-          </div>
-          <div className="form-group mb-0">
-            <label htmlFor="slot-filter-date-to">По</label>
-            <input id="slot-filter-date-to" type="date" value={slotDateTo} onChange={(e) => setSlotDateTo(e.target.value)} />
-          </div>
-          <div className="form-group mb-0">
-            <label htmlFor="slot-sort-by">Сортировка</label>
-            <select id="slot-sort-by" value={slotSortBy} onChange={(e) => setSlotSortBy(e.target.value as SlotSortBy)}>
-              <option value="startAt">По времени</option>
-              <option value="employeeName">По сотруднику</option>
-            </select>
-          </div>
-          <div className="form-group mb-0">
-            <label htmlFor="slot-sort-order">Порядок</label>
-            <select
-              id="slot-sort-order"
-              value={slotSortOrder}
-              onChange={(e) => setSlotSortOrder(e.target.value as 'asc' | 'desc')}
-            >
-              <option value="asc">По возрастанию</option>
-              <option value="desc">По убыванию</option>
-            </select>
-          </div>
-        </div>
-        <div className="row">
-          <button type="button" className="btn btn-secondary" onClick={() => void load()}>
-            Применить
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              setSlotEmployeeFilterId('');
-              setSlotDateFrom('');
-              setSlotDateTo('');
-              setSlotSortBy('startAt');
-              setSlotSortOrder('asc');
-            }}
-          >
-            Сбросить
-          </button>
-        </div>
-      </div>
-      <div className="stack">
-        {slots.map((slot) => {
-          const start = new Date(slot.startAt);
-          const end = new Date(slot.endAt);
-          const booked = slot.bookings?.length ?? 0;
-          return (
-            <div key={slot.id} className="card">
-              <strong>{slot.title || 'Слот'}</strong>
-              <p className="text-muted">
-                {start.toLocaleString('ru')} – {end.toLocaleString('ru')}
-              </p>
-              <p className="text-sm m-0">Записано: {booked} / {slot.capacity}</p>
-              <p className="text-sm m-0">Статус: {SLOT_STATUS_LABEL[slot.status]}</p>
-              <p className="text-sm m-0">Сотрудник: {slot.employee?.name ?? 'Не назначен'}</p>
-              <div className="form-group mt-half mb-0">
-                <label htmlFor={`slot-employee-${slot.id}`}>Назначить сотрудника</label>
-                <select
-                  id={`slot-employee-${slot.id}`}
-                  value={slot.employeeId ?? ''}
-                  disabled={slotUpdatingId === slot.id}
-                  onChange={(e) => void handleSlotEmployeeChange(slot.id, e.target.value)}
-                >
-                  <option value="">Не назначен</option>
-                  {employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          );
-        })}
-        {slots.length === 0 && <p>Слотов пока нет.</p>}
-      </div>
+      <SlotFilters
+        employees={employees}
+        slotEmployeeFilterId={slotEmployeeFilterId}
+        slotDateFrom={slotDateFrom}
+        slotDateTo={slotDateTo}
+        slotSortBy={slotSortBy}
+        slotSortOrder={slotSortOrder}
+        onEmployeeChange={setSlotEmployeeFilterId}
+        onDateFromChange={setSlotDateFrom}
+        onDateToChange={setSlotDateTo}
+        onSortByChange={setSlotSortBy}
+        onSortOrderChange={setSlotSortOrder}
+        onApply={() => void load()}
+        onReset={() => {
+          setSlotEmployeeFilterId('');
+          setSlotDateFrom('');
+          setSlotDateTo('');
+          setSlotSortBy('startAt');
+          setSlotSortOrder('asc');
+        }}
+      />
+      <SlotList
+        slots={slots}
+        employees={employees}
+        slotUpdatingId={slotUpdatingId}
+        onEmployeeChange={(slotId, employeeId) => void handleSlotEmployeeChange(slotId, employeeId)}
+      />
 
-      <h2>Сотрудники</h2>
-      {showEmployeeForm ? (
-        <form className="card form-card-wide mb-1" onSubmit={handleCreateEmployee}>
-          <div className="form-group">
-            <label htmlFor="employee-name">Имя сотрудника</label>
-            <input
-              id="employee-name"
-              value={employeeName}
-              onChange={(e) => setEmployeeName(e.target.value)}
-              placeholder="Например, Иван Петров"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="employee-description">Описание</label>
-            <textarea
-              id="employee-description"
-              value={employeeDescription}
-              onChange={(e) => setEmployeeDescription(e.target.value)}
-              rows={3}
-              placeholder="Опыт, специализация и т.д."
-            />
-          </div>
-          {directions.length > 0 && (
-            <div className="form-group form-group--checkbox">
-              <label>Направления</label>
-              <div className="stack-sm">
-                {directions.map((direction) => (
-                  <label key={direction.id}>
-                    <input
-                      type="checkbox"
-                      checked={employeeDirectionIds.includes(direction.id)}
-                      onChange={() => handleDirectionToggle(direction.id)}
-                    />
-                    {direction.name}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-          {employeeSaveError && <p className="error">{employeeSaveError}</p>}
-          <div className="row">
-            <button type="submit" className="btn btn-primary" disabled={employeeSaving}>
-              {employeeSaving ? 'Сохранение…' : editingEmployeeId ? 'Сохранить изменения' : 'Сохранить сотрудника'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setEditingEmployeeId(null);
-                setShowEmployeeForm(false);
-                setEmployeeSaveError('');
-                setEmployeeName('');
-                setEmployeeDescription('');
-                setEmployeeDirectionIds([]);
-              }}
-            >
-              Отмена
-            </button>
-          </div>
-        </form>
-      ) : (
-        <button type="button" className="btn btn-primary mb-1" onClick={() => setShowEmployeeForm(true)}>
-          Добавить сотрудника
-        </button>
-      )}
+      <EmployeeSection
+        employees={employees}
+        directions={directions}
+        employeeLoadError={employeeLoadError}
+        showEmployeeForm={showEmployeeForm}
+        editingEmployeeId={editingEmployeeId}
+        employeeName={employeeName}
+        employeeDescription={employeeDescription}
+        employeeDirectionIds={employeeDirectionIds}
+        employeeSaving={employeeSaving}
+        employeeSaveError={employeeSaveError}
+        employeeDeletingId={employeeDeletingId}
+        onShowForm={() => setShowEmployeeForm(true)}
+        onSubmit={handleCreateEmployee}
+        onNameChange={setEmployeeName}
+        onDescriptionChange={setEmployeeDescription}
+        onDirectionToggle={handleDirectionToggle}
+        onCancel={resetEmployeeForm}
+        onEdit={handleStartEditEmployee}
+        onDelete={handleDeleteEmployee}
+      />
 
       {pendingEmployeeDelete && (
-        <div className="modal-backdrop" role="presentation">
-          <div className="card modal-card" role="dialog" aria-modal="true" aria-labelledby="employee-delete-dialog-title">
-            <h3 id="employee-delete-dialog-title">Удаление сотрудника</h3>
-            <p>
-              Что сделать с будущими событиями сотрудника <strong>{pendingEmployeeDelete.name}</strong>?
-            </p>
-            <p className="text-sm m-0">
-              Прошедшие события сохранят удалённого сотрудника в истории, чтобы было видно, кто именно их проводил.
-            </p>
-            <p className="text-sm m-0">
-              Будущие события можно оставить без исполнителя для переназначения другому сотруднику или удалить вместе с ним.
-            </p>
-            <div className="row mt-1">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={employeeDeletingId === pendingEmployeeDelete.id}
-                onClick={() => void handleConfirmDeleteEmployee(false)}
-              >
-                Оставить без исполнителя
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                disabled={employeeDeletingId === pendingEmployeeDelete.id}
-                onClick={() => void handleConfirmDeleteEmployee(true)}
-              >
-                Удалить вместе с событиями
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={employeeDeletingId === pendingEmployeeDelete.id}
-                onClick={() => setPendingEmployeeDelete(null)}
-              >
-                Отмена
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteEmployeeDialog
+          employee={pendingEmployeeDelete}
+          deleting={employeeDeletingId === pendingEmployeeDelete.id}
+          onKeepWithoutEmployee={() => void handleConfirmDeleteEmployee(false)}
+          onDeleteWithEvents={() => void handleConfirmDeleteEmployee(true)}
+          onCancel={() => setPendingEmployeeDelete(null)}
+        />
       )}
-
-      {employeeLoadError && <p className="muted">{employeeLoadError}</p>}
-      <div className="stack">
-        {employees.map((employee) => (
-          <div key={employee.id} className="card">
-            <strong>{employee.name}</strong>
-            {employee.description && <p className="text-muted">{employee.description}</p>}
-            <div className="row">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => handleStartEditEmployee(employee)}
-              >
-                Редактировать
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                disabled={employeeDeletingId === employee.id}
-                onClick={() => handleDeleteEmployee(employee)}
-              >
-                {employeeDeletingId === employee.id ? 'Удаление…' : 'Удалить'}
-              </button>
-            </div>
-          </div>
-        ))}
-        {employees.length === 0 && !employeeLoadError && <p>Сотрудников пока нет.</p>}
-      </div>
     </>
   );
 }

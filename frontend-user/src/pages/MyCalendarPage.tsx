@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { bookingsApi, userEventsApi, getApiErrorMessage, userApi } from '../lib/api';
-import type { Booking, UserEvent, UserPreferences } from '../lib/api';
+import { bookingsApi, getApiErrorMessage, userApi, userEventsApi } from '@/lib/api';
+import type { Booking, UserEvent, UserPreferences } from '@/lib/api';
 
 type CalendarItemType = 'BOOKING' | 'USER_EVENT';
 
@@ -113,7 +113,15 @@ export function MyCalendarPage() {
           const end = new Date(b.slot!.endAt);
           const companyName = b.slot?.company?.name ?? 'Компания';
           const title = b.slot?.title ? `${companyName} — ${b.slot.title}` : companyName;
-          return { id: b.id, type: 'BOOKING' as const, start, end, title, subtitle: undefined, original: b };
+          return {
+            id: b.id,
+            type: 'BOOKING' as const,
+            start,
+            end,
+            title,
+            subtitle: b.slot?.employee?.name ? `Сотрудник: ${b.slot.employee.name}` : undefined,
+            original: b,
+          };
         });
       const fromEvents: CalendarItem[] = (eventsRes.data || []).map((e: UserEvent) => ({
         id: e.id,

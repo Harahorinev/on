@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { bookingsApi, userEventsApi, getApiErrorMessage, userApi } from '../lib/api';
-import type { Booking, UserEvent, UserPreferences } from '../lib/api';
+import { bookingsApi, getApiErrorMessage, userApi, userEventsApi } from '@/lib/api';
+import type { Booking, UserEvent, UserPreferences } from '@/lib/api';
+import { toDateOnly } from '@/lib/date';
 
 type CalendarItemType = 'BOOKING' | 'USER_EVENT';
 
@@ -27,10 +28,6 @@ function addDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
-}
-
-function toDateOnly(d: Date): string {
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 export function MyCalendarPage() {

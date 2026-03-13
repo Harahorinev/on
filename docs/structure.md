@@ -1,123 +1,125 @@
 # Структура проекта
 
-Описывает текущую организацию папок и файлов и рекомендации для будущих тасков.
+Документ описывает фактическую структуру репозитория после разделения host + microfrontends.
 
-## Корень репозитория
+## Корень
 
-```
+```text
 on/
-├── .cursor/rules/     # Правила для AI (например, тесты для новых компонентов)
-├── .github/workflows/  # CI/CD (lint, build, e2e, deploy)
-├── backend/           # Node.js + Express API
-├── docs/              # Документация (deploy, nginx, structure)
-├── frontend/          # React + Vite SPA
+├── backend/            # Express + SQLite API
+├── docs/               # Техническая документация и deployment notes
+├── frontend/           # Host SPA (shell, shared UI, fallback pages)
+├── frontend-auth/      # Remote для login/register
+├── frontend-user/      # Remote для пользовательских маршрутов
+├── frontend-company/   # Remote для кабинета компании
 ├── README.md
-└── .gitignore
+└── .github/workflows/  # CI/CD
 ```
 
----
+## Backend
 
-## Backend (`backend/`)
-
-```
+```text
 backend/
 ├── src/
-│   ├── index.ts       # Точка входа, подключение роутов и middleware
-│   ├── db.ts          # Инициализация SQLite
-│   ├── auth.ts        # JWT middleware
-│   └── routes/        # Роуты по доменам (один файл = один ресурс/домен)
+│   ├── index.ts                 # Express app, middleware, подключение роутов
+│   ├── db.ts                    # SQLite schema + compatibility ALTERs
+│   ├── db-types.ts              # Типы строк для better-sqlite3 query results
+│   ├── auth.ts                  # JWT auth middleware
+│   ├── errors.ts                # AppError + error handlers
+│   ├── emailNotifications.ts    # Email reminders/notifications scheduler
+│   ├── monitoring.ts            # Snapshot для /health
+│   ├── slotViews.ts             # Shared slot filters/order/mappers
+│   ├── employeeLifecycle.ts     # Soft-delete сотрудника и обработка future slots
+│   └── routes/
 │       ├── auth.ts
 │       ├── companies.ts
+│       ├── directions.ts
+│       ├── employees.ts
 │       ├── slots.ts
 │       ├── bookings.ts
-│       ├── directions.ts
-│       └── userEvents.ts
+│       ├── user.ts
+│       ├── userEvents.ts
+│       └── chat.ts
 ├── scripts/
-│   └── seed.ts        # Сид для тестовых данных
+│   ├── seed.ts                  # Тестовые/демо данные
+│   └── backup.ts                # Ручной backup SQLite
 ├── package.json
 └── .env.example
 ```
 
-**Рекомендации для будущих тасков:**
+Ключевые особенности backend-структуры:
 
-- **Новый домен (например, «Уведомления»):** добавить `routes/notifications.ts` и подключить в `index.ts`.
-- **Рост логики в роутах:** вынести бизнес-логику в `src/services/` (например, `services/bookingService.ts`), роуты оставить тонкими (валидация → вызов сервиса → ответ).
-- **Общие типы/хелперы:** при дублировании завести `src/types.ts` или `src/utils/`.
-- **Миграции БД:** при появлении миграций — папка `scripts/migrations/` или отдельный пакет миграций.
+- Бизнес-логика пока в основном живёт рядом с роутами, но общие части уже вынесены в `slotViews.ts` и `employeeLifecycle.ts`.
+- `index.ts` подключает также `/chat`, `/user/preferences`, `/user/password`, `/companies/:id/export`, `/companies/:companyId/employees`.
+- Напоминания по email стартуют автоматически вне test-окружения через `startBookingReminderScheduler()`.
 
----
+## Frontend host
 
-## Frontend (`frontend/`)
-
-```
+```text
 frontend/
-├── e2e/               # Playwright E2E-тесты
-│   ├── auth.spec.ts
-│   ├── calendar.spec.ts
-│   └── README.md
-├── public/
+├── e2e/                        # Playwright smoke/user flows
 ├── src/
-│   ├── App.tsx
-│   ├── main.tsx
-│   ├── index.css
-│   ├── components/    # Переиспользуемые UI-компоненты
-│   │   ├── Layout.tsx
-│   │   ├── ProtectedRoute.tsx
+│   ├── routes.tsx              # Решает: local pages или module federation remotes
+│   ├── components/
+│   │   ├── ActionDialog.tsx
 │   │   ├── CreateCompanyForm.tsx
 │   │   ├── CreateSlotForm.tsx
-│   │   └── *.test.tsx
-│   ├── contexts/      # React Context (auth, notifications)
-│   │   ├── AuthContext.tsx
-│   │   └── NotificationContext.tsx
-│   ├── pages/         # Страницы (роуты)
-│   │   ├── HomePage.tsx
-│   │   ├── LoginPage.tsx
-│   │   ├── RegisterPage.tsx
-│   │   ├── CompaniesPage.tsx
-│   │   ├── CompanySchedulePage.tsx
-│   │   ├── CompanyPage.tsx
-│   │   ├── BookingsPage.tsx
-│   │   ├── MyCalendarPage.tsx
-│   │   └── *.test.tsx
-│   ├── lib/           # API-клиент, типы, утилиты
-│   │   └── api.ts     # axios instance + типы + authApi, companiesApi, ...
+│   │   ├── Layout.tsx
+│   │   ├── ProtectedRoute.tsx
+│   │   └── company/            # Блоки кабинета компании
+│   │       ├── DeleteEmployeeDialog.tsx
+│   │       ├── EmployeeSection.tsx
+│   │       ├── SlotFilters.tsx
+│   │       └── SlotList.tsx
+│   ├── contexts/               # AuthContext / NotificationContext
+│   ├── lib/
+│   │   ├── api.ts
+│   │   ├── date.ts
+│   │   └── slotQuery.ts
+│   ├── pages/                  # Local fallback pages и host-only pages
 │   └── test/
-│       └── setup.ts   # setup для Vitest (jest-dom и т.п.)
-├── package.json
-├── vite.config.ts
-├── playwright.config.ts
-└── eslint.config.js
+└── package.json
 ```
 
-**Рекомендации для будущих тасков:**
+Host отвечает за:
 
-- **Новая страница:** `pages/NewFeaturePage.tsx` + `pages/NewFeaturePage.test.tsx`, маршрут в `App.tsx`. По конвенции (.cursor/rules) — тесты обязательны.
-- **Новый переиспользуемый компонент:** `components/ComponentName.tsx` + `*.test.tsx`. Если появятся много мелких UI-кирпичиков (кнопки, инпуты, модалки) — выделить подпапку `components/ui/`.
-- **Разрастание `lib/api.ts`:** разбить на `lib/api/client.ts`, `lib/api/types.ts`, `lib/api/auth.ts`, `lib/api/companies.ts` и т.д., в `lib/api/index.ts` реэкспортировать. Пока один файл допустим.
-- **Переиспользуемая логика (хуки):** при повторении — папка `src/hooks/` (например, `useCompanies.ts`, `useAuthGuard.ts`).
-- **E2E:** новые сценарии — новые `e2e/*.spec.ts` по фичам (auth, calendar, bookings, …).
+- глобальный layout и protected routing;
+- shared CSS (`index.css`);
+- fallback-страницы, если remotes недоступны;
+- интеграцию remotes через `VITE_USE_MF`.
 
----
+## Microfrontends
 
-## Документация (`docs/`)
+### `frontend-auth`
+
+- Лёгкий remote только для auth-flow.
+- Основные файлы: `src/App.tsx`, `src/pages/LoginPage.tsx`, `src/pages/RegisterPage.tsx`, `src/lib/api.ts`.
+
+### `frontend-user`
+
+- Remote для пользовательских маршрутов: компании, расписание компании, бронирования, календарь, настройки.
+- Содержит собственный `ActionDialog` и свой API client, синхронизированный по контракту с host.
+
+### `frontend-company`
+
+- Remote для кабинета компании.
+- Содержит company dashboard, формы создания слотов и сотрудников, employee delete dialog и свой API client.
+
+## Документация
 
 | Файл | Назначение |
 |------|------------|
-| `structure.md` | Структура проекта (этот файл) |
-| `database-schema.md` | Описание таблиц SQLite, в т.ч. employee_directions (B91) |
-| `env-vars.md` | Единая памятка по переменным окружения backend/frontend (M36) |
-| `email-setup.md` | Настройка отправки email (FRONTEND_URL, SMTP, сброс пароля) |
-| `deploy-cd.md` | CD через GitHub Actions, секреты, сервер |
-| `nginx-server.md` | Nginx для фронта и прокси `/api` на бэкенд |
-| `ssl-certificates.md` | HTTPS: Let's Encrypt, Certbot, настройка Nginx (M68) |
+| `docs/structure.md` | Текущая структура репозитория |
+| `docs/database-schema.md` | Актуальная SQLite schema |
+| `docs/env-vars.md` | Переменные окружения backend/frontend |
+| `docs/email-setup.md` | SMTP и email-flow |
+| `docs/deploy-cd.md` | Deploy/CD |
+| `docs/nginx-server.md` | Nginx и reverse proxy |
+| `docs/ssl-certificates.md` | HTTPS / Let's Encrypt |
 
-При добавлении новых способов развёртывания, API-контрактов или архитектурных решений — дополнять `docs/` и при необходимости ссылаться из README.
+## Что учитывать в новых задачах
 
----
-
-## Итог
-
-- **Сейчас:** структура плоская и понятная; тесты рядом с компонентами/страницами; один файл API на фронте — ок для текущего размера.
-- **По мере роста:** выносить логику бэка в `services/`, дробить `lib/api.ts` и добавлять `hooks/` и `components/ui/` на фронте, не меняя общую схему папок.
-
-При новых тасках ориентироваться на этот документ и конвенции в `.cursor/rules/`.
+- Если меняется API-контракт, проверять и host `frontend/src/lib/api.ts`, и remote `frontend-auth|user|company/src/lib/api.ts`.
+- Если меняется маршрут из `frontend/src/routes.tsx`, проверять поведение и в local fallback, и в remote-app.
+- Если backend-роут начинает дублировать slot/bookings логику, дополнять `backend/src/slotViews.ts` или выносить новый shared helper рядом.
+- При изменениях в БД обновлять одновременно `backend/src/db.ts` и `docs/database-schema.md`.

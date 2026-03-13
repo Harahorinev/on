@@ -24,13 +24,10 @@ export interface SlotRow {
   location: string | null;
 }
 
-/** Slot row with company columns (SELECT s.*, c.id as cid, c.name as cname). */
-export interface SlotRowWithCompany extends SlotRow {
+/** Slot row with company/employee joins used by slot reads. */
+export interface SlotRowWithCompanyAndEmployee extends SlotRow {
   cid: string;
   cname: string;
-}
-
-export interface SlotRowWithCompanyAndEmployee extends SlotRowWithCompany {
   eid: string | null;
   ename: string | null;
 }

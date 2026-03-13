@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { authApi, getApiErrorMessage } from '../lib/api';
+import { authApi, getApiErrorMessage } from '@/lib/api';
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();

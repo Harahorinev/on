@@ -6,48 +6,17 @@ import { AppError } from "../errors.js";
 import { msg } from "../messages.js";
 import { LIMITS, validateMaxLength } from "../validation.js";
 import type { SlotRow, SlotRowWithCompanyAndEmployee } from "../db-types.js";
+import {
+  SLOT_SELECT,
+  buildCompanySlotWhere,
+  getActiveCompanyEmployee,
+  getSlotOrderBy,
+  normalizeEmployeeId,
+  slotJoinedToJson,
+  slotToJson,
+} from "../slotViews.js";
 
 export const slotsRouter = Router({ mergeParams: true });
-
-const SLOT_SELECT =
-  "SELECT s.*, c.id as cid, c.name as cname, e.id as eid, e.name as ename FROM slots s JOIN companies c ON s.company_id = c.id LEFT JOIN employees e ON s.employee_id = e.id";
-
-function normalizeEmployeeId(value: unknown): string | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return null;
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
-}
-
-function getCompanyEmployee(companyId: string, employeeId: string) {
-  return db
-    .prepare("SELECT id, name FROM employees WHERE id = ? AND company_id = ? AND deleted_at IS NULL")
-    .get(employeeId, companyId) as
-    | { id: string; name: string }
-    | undefined;
-}
-
-export function slotToJson(
-  row: SlotRow,
-  company?: { id: string; name: string },
-  employee?: { id: string; name: string } | null
-) {
-  return {
-    id: row.id,
-    companyId: row.company_id,
-    employeeId: row.employee_id ?? undefined,
-    startAt: row.start_at,
-    endAt: row.end_at,
-    capacity: row.capacity,
-    status: row.status,
-    title: row.title ?? undefined,
-    description: row.description ?? undefined,
-    location: row.location ?? undefined,
-    ...(company && { company }),
-    ...(employee && { employee }),
-  };
-}
 
 export function getSlotById(req: express.Request, res: express.Response, next: express.NextFunction) {
   const row = db
@@ -57,7 +26,7 @@ export function getSlotById(req: express.Request, res: express.Response, next: e
     next(new AppError(404, msg.slot_notFound));
     return;
   }
-  res.json(slotToJson(row, { id: row.cid, name: row.cname }, row.eid ? { id: row.eid, name: row.ename ?? "" } : null));
+  res.json(slotJoinedToJson(row));
 }
 
 slotsRouter.get("/", (req, res, next) => {
@@ -73,30 +42,10 @@ slotsRouter.get("/", (req, res, next) => {
     sortBy?: string;
     sortOrder?: string;
   };
-  let sql = `${SLOT_SELECT} WHERE s.company_id = ?`;
-  const params: (string | number)[] = [companyId];
-  if (dateFrom) {
-    sql += " AND s.start_at >= ?";
-    params.push(dateFrom);
-  }
-  if (dateTo) {
-    sql += " AND s.end_at <= ?";
-    params.push(dateTo);
-  }
-  if (employeeId) {
-    sql += " AND s.employee_id = ?";
-    params.push(employeeId);
-  }
-  const normalizedSortOrder = sortOrder === "desc" ? "DESC" : "ASC";
-  if (sortBy === "employeeName") {
-    sql += ` ORDER BY (e.name IS NULL), e.name ${normalizedSortOrder}, s.start_at ASC`;
-  } else {
-    sql += ` ORDER BY s.start_at ${normalizedSortOrder}`;
-  }
+  const { where, params } = buildCompanySlotWhere({ companyId, dateFrom, dateTo, employeeId });
+  const sql = `${SLOT_SELECT} ${where}${getSlotOrderBy(sortBy, sortOrder)}`;
   const rows = db.prepare(sql).all(...params) as SlotRowWithCompanyAndEmployee[];
-  const slots = rows.map((r) =>
-    slotToJson(r, { id: r.cid, name: r.cname }, r.eid ? { id: r.eid, name: r.ename ?? "" } : null)
-  );
+  const slots = rows.map(slotJoinedToJson);
   res.json(slots);
 });
 
@@ -108,7 +57,7 @@ slotsRouter.get("/:slotId", (req, res, next) => {
     next(new AppError(404, msg.slot_notFound));
     return;
   }
-  res.json(slotToJson(row, { id: row.cid, name: row.cname }, row.eid ? { id: row.eid, name: row.ename ?? "" } : null));
+  res.json(slotJoinedToJson(row));
 });
 
 slotsRouter.post("/", authMiddleware, (req, res, next) => {
@@ -134,7 +83,7 @@ slotsRouter.post("/", authMiddleware, (req, res, next) => {
     next(new AppError(400, msg.slot_employeeInvalid));
     return;
   }
-  const employee = employeeId ? getCompanyEmployee(companyId, employeeId) : null;
+  const employee = employeeId ? getActiveCompanyEmployee(companyId, employeeId) : null;
   if (employeeId && !employee) {
     next(new AppError(400, msg.slot_employeeInvalid));
     return;
@@ -212,7 +161,7 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
     next(new AppError(400, msg.slot_employeeInvalid));
     return;
   }
-  const employee = employeeId ? getCompanyEmployee(companyId, employeeId) : null;
+  const employee = employeeId ? getActiveCompanyEmployee(companyId, employeeId) : null;
   if (employeeId && !employee) {
     next(new AppError(400, msg.slot_employeeInvalid));
     return;
@@ -298,7 +247,7 @@ slotsRouter.patch("/:slotId", authMiddleware, (req, res, next) => {
     next(new AppError(404, msg.slot_notFound));
     return;
   }
-  res.json(slotToJson(row, { id: row.cid, name: row.cname }, row.eid ? { id: row.eid, name: row.ename ?? "" } : null));
+  res.json(slotJoinedToJson(row));
 });
 
 slotsRouter.delete("/:slotId", authMiddleware, (req, res, next) => {

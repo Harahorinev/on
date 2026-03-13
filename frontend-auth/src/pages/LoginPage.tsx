@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi, getApiErrorMessage } from '../lib/api';
-import type { User } from '../lib/api';
+import { authApi, getApiErrorMessage, type User } from '@/lib/api';
 
 interface LoginPageProps {
   onLogin: (token: string, user: User) => void;

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { authApi, getApiErrorMessage } from '../lib/api';
-import type { UserRole } from '../lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { authApi, getApiErrorMessage, type UserRole } from '@/lib/api';
 
 export function RegisterPage() {
   const [email, setEmail] = useState('');

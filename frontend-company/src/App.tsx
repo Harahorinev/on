@@ -1,5 +1,5 @@
-import type { User } from './lib/api';
-import { CompanyPage } from './pages/CompanyPage';
+import type { User } from '@/lib/api';
+import { CompanyPage } from '@/pages/CompanyPage';
 
 export interface CompanyAppProps {
   user: User | null;

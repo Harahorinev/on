@@ -2,11 +2,11 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import type { User } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
-import { Layout } from './Layout';
+import { Layout } from '@/components/Layout';
+import { useAuth } from '@/contexts/AuthContext';
+import type { User } from '@/lib/api';
 
-vi.mock('../contexts/AuthContext');
+vi.mock('@/contexts/AuthContext');
 
 function mockAuth(overrides: { user?: User | null; logout?: () => void } = {}) {
   return {

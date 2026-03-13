@@ -2,12 +2,12 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { CompaniesPage } from './CompaniesPage';
-import { companiesApi } from '../lib/api';
+import { CompaniesPage } from '@/pages/CompaniesPage';
+import { companiesApi } from '@/lib/api';
 
 type CompaniesListResponse = Awaited<ReturnType<typeof companiesApi.list>>;
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   companiesApi: { list: vi.fn() },
 }));
 

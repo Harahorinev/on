@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
-import { CompanyPage } from './CompanyPage';
-import { useAuth } from '../contexts/AuthContext';
-import { companiesApi, directionsApi, employeesApi, slotsApi } from '../lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { companiesApi, directionsApi, employeesApi, slotsApi } from '@/lib/api';
+import { CompanyPage } from '@/pages/CompanyPage';
 
-vi.mock('../contexts/AuthContext');
-vi.mock('../lib/api', () => ({
+vi.mock('@/contexts/AuthContext');
+vi.mock('@/lib/api', () => ({
   companiesApi: { getMy: vi.fn(), exportScheduleCsv: vi.fn() },
   slotsApi: { list: vi.fn(), update: vi.fn() },
   employeesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { slotsApi, bookingsApi, companiesApi, getApiErrorMessage } from '../lib/api';
-import type { Company, ScheduleSlot, SlotStatus, User } from '../lib/api';
+import { ActionDialog } from '@/components/ActionDialog';
+import { bookingsApi, companiesApi, getApiErrorMessage, slotsApi } from '@/lib/api';
+import type { Company, ScheduleSlot, SlotStatus, User } from '@/lib/api';
 
 const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
   OPEN: 'Открыт',
@@ -34,6 +35,7 @@ export function CompanySchedulePage({ user, notifySuccess }: CompanySchedulePage
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
+  const [pendingBookingSlot, setPendingBookingSlot] = useState<ScheduleSlot | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -59,18 +61,13 @@ export function CompanySchedulePage({ user, notifySuccess }: CompanySchedulePage
 
   useEffect(() => load(), [load]);
 
-  const handleBook = async (slot: ScheduleSlot) => {
-    if (!user || user.role !== 'USER') return;
-    const start = new Date(slot.startAt);
-    const end = new Date(slot.endAt);
-    const companyName = company?.name ?? 'Компания';
-    const slotTitle = slot.title || 'Слот';
-    const message = `Записаться на «${slotTitle}» в ${companyName}\n${start.toLocaleString('ru')} – ${end.toLocaleString('ru')}?`;
-    if (!window.confirm(message)) return;
-    setBookingSlotId(slot.id);
+  const handleBook = async () => {
+    if (!user || user.role !== 'USER' || !pendingBookingSlot) return;
+    setBookingSlotId(pendingBookingSlot.id);
     try {
-      await bookingsApi.create(slot.id);
+      await bookingsApi.create(pendingBookingSlot.id);
       setError('');
+      setPendingBookingSlot(null);
       notifySuccess('Вы записались на слот');
       load();
     } catch (err: unknown) {
@@ -130,6 +127,7 @@ export function CompanySchedulePage({ user, notifySuccess }: CompanySchedulePage
                   <p className="text-muted">
                     {start.toLocaleString('ru')} – {end.toLocaleString('ru')}
                   </p>
+                  <p className="text-sm m-0">Сотрудник: {slot.employee?.name ?? 'Не назначен'}</p>
                   {slot.description && <p className="text-xs m-0">{slot.description}</p>}
                   <p className="text-sm mt-half m-0">
                     Статус: {SLOT_STATUS_LABEL[slot.status]}
@@ -144,7 +142,7 @@ export function CompanySchedulePage({ user, notifySuccess }: CompanySchedulePage
                     type="button"
                     className="btn btn-primary"
                     disabled={isBooking}
-                    onClick={() => handleBook(slot)}
+                    onClick={() => setPendingBookingSlot(slot)}
                   >
                     {isBooking ? 'Запись…' : 'Записаться'}
                   </button>
@@ -155,6 +153,29 @@ export function CompanySchedulePage({ user, notifySuccess }: CompanySchedulePage
         })}
         {slots.length === 0 && <p>Нет доступных слотов.</p>}
       </div>
+      {pendingBookingSlot && (
+        <ActionDialog
+          title="Подтверждение записи"
+          lines={[
+            `Записаться на «${pendingBookingSlot.title || 'Слот'}» в ${company?.name ?? 'Компания'}?`,
+            `${new Date(pendingBookingSlot.startAt).toLocaleString('ru')} – ${new Date(pendingBookingSlot.endAt).toLocaleString('ru')}`,
+          ]}
+          actions={[
+            {
+              label: bookingSlotId === pendingBookingSlot.id ? 'Запись…' : 'Записаться',
+              variant: 'primary',
+              disabled: bookingSlotId === pendingBookingSlot.id,
+              onClick: () => void handleBook(),
+            },
+            {
+              label: 'Отмена',
+              variant: 'secondary',
+              disabled: bookingSlotId === pendingBookingSlot.id,
+              onClick: () => setPendingBookingSlot(null),
+            },
+          ]}
+        />
+      )}
     </>
   );
 }

@@ -2,15 +2,15 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { LoginPage } from './LoginPage';
+import { LoginPage } from '@/pages/LoginPage';
 
 const mockLogin = vi.fn();
 
-vi.mock('../contexts/AuthContext', () => ({
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ login: mockLogin }),
 }));
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   authApi: { login: vi.fn() },
   getApiErrorMessage: (_: unknown, fallback: string) => fallback,
 }));

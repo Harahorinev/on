@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { userApi, getApiErrorMessage, type UserPreferences } from '../lib/api';
+import { userApi, getApiErrorMessage, type UserPreferences } from '@/lib/api';
 
 export function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPreferences>({});

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getApiErrorMessage } from './api';
+import { getApiErrorMessage } from '@/lib/api';
 
 describe('getApiErrorMessage', () => {
   it('translates known API message to Russian', () => {

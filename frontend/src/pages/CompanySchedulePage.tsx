@@ -1,25 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { slotsApi, bookingsApi, companiesApi, getApiErrorMessage } from '../lib/api';
-import type { Company, ScheduleSlot, SlotStatus } from '../lib/api';
-import { useNotifications } from '../contexts/NotificationContext';
+import { ActionDialog } from '@/components/ActionDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { bookingsApi, companiesApi, getApiErrorMessage, slotsApi } from '@/lib/api';
+import type { Company, ScheduleSlot, SlotStatus } from '@/lib/api';
+import { toDateOnly } from '@/lib/date';
+import { buildSlotQueryParams } from '@/lib/slotQuery';
 
 const SLOT_STATUS_LABEL: Record<SlotStatus, string> = {
   OPEN: 'Открыт',
   CANCELLED: 'Отменён',
   CLOSED: 'Закрыт',
 };
-
-function toDateOnly(date: Date): string {
-  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
-}
-
-function dateFromToISO(dateStr: string, endOfDay: boolean): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-  return date.toISOString();
-}
 
 export function CompanySchedulePage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +26,7 @@ export function CompanySchedulePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
+  const [pendingBookingSlot, setPendingBookingSlot] = useState<ScheduleSlot | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -45,10 +39,7 @@ export function CompanySchedulePage() {
   const load = useCallback(() => {
     if (!id) return;
     setLoading(true);
-    const params = {
-      dateFrom: dateFromToISO(dateFrom, false),
-      dateTo: dateFromToISO(dateTo, true),
-    };
+    const params = buildSlotQueryParams({ dateFrom, dateTo });
     slotsApi
       .list(id, params)
       .then((r) => setSlots(r.data))
@@ -58,18 +49,13 @@ export function CompanySchedulePage() {
 
   useEffect(() => load(), [load]);
 
-  const handleBook = async (slot: ScheduleSlot) => {
-    if (!user || user.role !== 'USER') return;
-    const start = new Date(slot.startAt);
-    const end = new Date(slot.endAt);
-    const companyName = company?.name ?? 'Компания';
-    const slotTitle = slot.title || 'Слот';
-    const message = `Записаться на «${slotTitle}» в ${companyName}\n${start.toLocaleString('ru')} – ${end.toLocaleString('ru')}?`;
-    if (!window.confirm(message)) return;
-    setBookingSlotId(slot.id);
+  const handleBook = async () => {
+    if (!user || user.role !== 'USER' || !pendingBookingSlot) return;
+    setBookingSlotId(pendingBookingSlot.id);
     try {
-      await bookingsApi.create(slot.id);
+      await bookingsApi.create(pendingBookingSlot.id);
       setError('');
+      setPendingBookingSlot(null);
       notifySuccess('Вы записались на слот');
       load();
     } catch (err: unknown) {
@@ -144,7 +130,7 @@ export function CompanySchedulePage() {
                     type="button"
                     className="btn btn-primary"
                     disabled={isBooking}
-                    onClick={() => handleBook(slot)}
+                    onClick={() => setPendingBookingSlot(slot)}
                   >
                     {isBooking ? 'Запись…' : 'Записаться'}
                   </button>
@@ -155,6 +141,29 @@ export function CompanySchedulePage() {
         })}
         {slots.length === 0 && <p>Нет доступных слотов.</p>}
       </div>
+      {pendingBookingSlot && (
+        <ActionDialog
+          title="Подтверждение записи"
+          lines={[
+            `Записаться на «${pendingBookingSlot.title || 'Слот'}» в ${company?.name ?? 'Компания'}?`,
+            `${new Date(pendingBookingSlot.startAt).toLocaleString('ru')} – ${new Date(pendingBookingSlot.endAt).toLocaleString('ru')}`,
+          ]}
+          actions={[
+            {
+              label: bookingSlotId === pendingBookingSlot.id ? 'Запись…' : 'Записаться',
+              variant: 'primary',
+              disabled: bookingSlotId === pendingBookingSlot.id,
+              onClick: () => void handleBook(),
+            },
+            {
+              label: 'Отмена',
+              variant: 'secondary',
+              disabled: bookingSlotId === pendingBookingSlot.id,
+              onClick: () => setPendingBookingSlot(null),
+            },
+          ]}
+        />
+      )}
     </>
   );
 }

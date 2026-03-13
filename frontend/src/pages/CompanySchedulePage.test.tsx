@@ -2,15 +2,15 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { CompanySchedulePage } from './CompanySchedulePage';
-import { useAuth } from '../contexts/AuthContext';
-import { companiesApi, slotsApi } from '../lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { companiesApi, slotsApi } from '@/lib/api';
+import { CompanySchedulePage } from '@/pages/CompanySchedulePage';
 
-vi.mock('../contexts/AuthContext');
-vi.mock('../contexts/NotificationContext', () => ({
+vi.mock('@/contexts/AuthContext');
+vi.mock('@/contexts/NotificationContext', () => ({
   useNotifications: () => ({ notifySuccess: vi.fn() }),
 }));
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   companiesApi: { get: vi.fn() },
   slotsApi: { list: vi.fn() },
   bookingsApi: { create: vi.fn() },

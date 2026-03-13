@@ -2,10 +2,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { HomePage } from './HomePage';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { HomePage } from '@/pages/HomePage';
 
-vi.mock('../contexts/AuthContext');
+vi.mock('@/contexts/AuthContext');
 
 function wrap(ui: React.ReactElement) {
   return render(<BrowserRouter>{ui}</BrowserRouter>);

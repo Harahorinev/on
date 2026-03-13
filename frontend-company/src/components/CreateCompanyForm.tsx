@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { companiesApi, getApiErrorMessage } from '../lib/api';
+import { companiesApi, getApiErrorMessage } from '@/lib/api';
 
 export function CreateCompanyForm({
   onSuccess,

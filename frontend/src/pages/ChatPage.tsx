@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { chatApi, ChatMessage, getApiErrorMessage } from '../lib/api';
+import { chatApi, getApiErrorMessage, type ChatMessage } from '@/lib/api';
 
 type ChatPageProps = {
   variant?: 'page' | 'widget';

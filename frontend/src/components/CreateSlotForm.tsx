@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { slotsApi, getApiErrorMessage } from '../lib/api';
-import type { CompanyEmployee } from '../lib/api';
-import { useNotifications } from '../contexts/NotificationContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { slotsApi, getApiErrorMessage, type CompanyEmployee } from '@/lib/api';
 
 export function CreateSlotForm({
   companyId,

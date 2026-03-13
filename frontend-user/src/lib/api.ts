@@ -40,41 +40,11 @@ type ApiErrorShape = {
   code?: string;
 };
 
-const API_ERROR_RU: Record<string, string> = {
-  'Company not found': 'Компания не найдена',
-  'Slot not found': 'Слот не найден',
-  'Booking not found': 'Запись не найдена',
-  'Only USER can create bookings': 'Только пользователь может записываться на слоты',
-  'Slot is not available': 'Слот недоступен',
-  'Already booked': 'Вы уже записаны на этот слот',
-  'Slot is full': 'Слот заполнен',
-  'Only USER can have personal events': 'Только пользователь может просматривать личные события',
-  'Only USER can create personal events': 'Только пользователь может создавать личные события',
-  'title required': 'Укажите название',
-  'startAt and endAt required': 'Укажите начало и окончание',
-  'title must be non-empty': 'Название не должно быть пустым',
-  'Invalid startAt': 'Неверная дата начала',
-  'Invalid endAt': 'Неверная дата окончания',
-  'Event not found': 'Событие не найдено',
-  'currentPassword and newPassword required': 'Укажите текущий и новый пароль',
-  'newPassword at least 6 characters': 'Новый пароль не менее 6 символов',
-  'Current password is incorrect': 'Текущий пароль неверный',
-  'notifyEmail must be boolean': 'Уведомления по email: да/нет',
-  'notifyInApp must be boolean': 'Уведомления в приложении: да/нет',
-  'calendarView must be week or month': 'Вид календаря: неделя или месяц',
-  'calendarRange must be 7, 14, or 30': 'Период календаря: 7, 14 или 30 дней',
-  Unauthorized: 'Войдите в аккаунт',
-  'Not found': 'Не найдено',
-};
-
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
     const e = err as ApiErrorShape;
     const apiMsg = e.response?.data?.message;
-    if (typeof apiMsg === 'string') {
-      const ru = API_ERROR_RU[apiMsg.trim()];
-      return ru ?? apiMsg;
-    }
+    if (typeof apiMsg === 'string' && apiMsg.trim()) return apiMsg.trim();
     if (e.response?.status) return `Ошибка сервера (${e.response.status})`;
     const msg = typeof e.message === 'string' ? e.message : '';
     const lower = msg.toLowerCase();
@@ -104,10 +74,12 @@ export interface Company {
 }
 
 export type SlotStatus = 'OPEN' | 'CANCELLED' | 'CLOSED';
+export type SlotSortBy = 'startAt' | 'employeeName';
 
 export interface ScheduleSlot {
   id: string;
   companyId: string;
+  employeeId?: string;
   startAt: string;
   endAt: string;
   capacity: number;
@@ -116,6 +88,7 @@ export interface ScheduleSlot {
   description?: string;
   location?: string;
   company?: { id: string; name: string };
+  employee?: { id: string; name: string };
   bookings?: { id: string; userId: string }[];
 }
 
@@ -144,7 +117,10 @@ export const companiesApi = {
 };
 
 export const slotsApi = {
-  list: (companyId: string, params?: { dateFrom?: string; dateTo?: string }) =>
+  list: (
+    companyId: string,
+    params?: { dateFrom?: string; dateTo?: string; employeeId?: string; sortBy?: SlotSortBy; sortOrder?: 'asc' | 'desc' }
+  ) =>
     api.get<ScheduleSlot[]>(`/companies/${companyId}/slots`, { params }),
 };
 

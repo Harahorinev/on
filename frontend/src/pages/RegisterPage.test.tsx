@@ -2,12 +2,12 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { RegisterPage } from './RegisterPage';
+import { RegisterPage } from '@/pages/RegisterPage';
 
-vi.mock('../contexts/AuthContext', () => ({
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ login: vi.fn() }),
 }));
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   authApi: { register: vi.fn() },
   getApiErrorMessage: (_: unknown, fallback: string) => fallback,
 }));

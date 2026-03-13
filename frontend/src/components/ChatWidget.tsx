@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChatPage } from '../pages/ChatPage';
+import { ChatPage } from '@/pages/ChatPage';
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);

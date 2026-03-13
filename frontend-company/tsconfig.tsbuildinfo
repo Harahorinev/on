@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/createcompanyform.tsx","./src/components/createslotform.tsx","./src/lib/api.ts","./src/pages/companypage.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/actiondialog.tsx","./src/components/createcompanyform.tsx","./src/components/createslotform.tsx","./src/components/deleteemployeedialog.tsx","./src/lib/api.ts","./src/pages/companypage.tsx"],"version":"5.9.3"}
