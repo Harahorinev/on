@@ -26,21 +26,70 @@ function clearTestData() {
   const companyUserIds = [findUserByEmail("company@example.com")?.id, findUserByEmail("company2@example.com")?.id].filter(
     Boolean
   ) as string[];
-  if (userIds.length > 0) {
-    const placeholders = userIds.map(() => "?").join(",");
+  const placeholders = userIds.map(() => "?").join(",");
+  const companyPlaceholders = companyUserIds.map(() => "?").join(",");
+
+  // Important: delete children first because many tables reference users/bookings/events without ON DELETE CASCADE.
+  const tx = db.transaction(() => {
+    db.prepare(`DELETE FROM email_notification_logs WHERE user_id IN (${placeholders})`).run(...userIds);
+    db.prepare(`DELETE FROM password_reset_tokens WHERE user_id IN (${placeholders})`).run(...userIds);
+    db.prepare(`DELETE FROM email_verification_tokens WHERE user_id IN (${placeholders})`).run(...userIds);
+    db.prepare(`DELETE FROM user_preferences WHERE user_id IN (${placeholders})`).run(...userIds);
+
+    db.prepare(
+      `DELETE FROM chat_messages
+       WHERE sender_user_id IN (${placeholders})
+          OR conversation_id IN (
+            SELECT id FROM chat_conversations WHERE owner_user_id IN (${placeholders})
+          )`
+    ).run(...userIds, ...userIds);
+    db.prepare(`DELETE FROM chat_conversations WHERE owner_user_id IN (${placeholders})`).run(...userIds);
+
+    db.prepare(`DELETE FROM chat_messages WHERE booking_id IN (SELECT id FROM bookings WHERE user_id IN (${placeholders}))`).run(
+      ...userIds
+    );
     db.prepare(`DELETE FROM bookings WHERE user_id IN (${placeholders})`).run(...userIds);
-  }
-  if (companyUserIds.length > 0) {
-    const companyIds = db
-      .prepare("SELECT id FROM companies WHERE owner_id IN (" + companyUserIds.map(() => "?").join(",") + ")")
-      .all(...companyUserIds) as { id: string }[];
-    if (companyIds.length > 0) {
-      const ids = companyIds.map((c) => c.id);
-      db.prepare("DELETE FROM slots WHERE company_id IN (" + ids.map(() => "?").join(",") + ")").run(...ids);
-      db.prepare("DELETE FROM companies WHERE id IN (" + ids.map(() => "?").join(",") + ")").run(...ids);
+
+    if (companyUserIds.length > 0) {
+      const companyIds = db
+        .prepare(`SELECT id FROM companies WHERE owner_id IN (${companyPlaceholders})`)
+        .all(...companyUserIds) as { id: string }[];
+
+      if (companyIds.length > 0) {
+        const ids = companyIds.map((c) => c.id);
+        const companyIdsPlaceholders = ids.map(() => "?").join(",");
+
+        db.prepare(
+          `DELETE FROM chat_messages WHERE booking_id IN (
+             SELECT id FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE company_id IN (${companyIdsPlaceholders}))
+           )`
+        ).run(...ids);
+        db.prepare(
+          `DELETE FROM chat_messages WHERE user_event_id IN (
+             SELECT id FROM user_events WHERE user_id IN (${placeholders})
+           )`
+        ).run(...userIds);
+        db.prepare(`DELETE FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE company_id IN (${companyIdsPlaceholders}))`).run(
+          ...ids
+        );
+        db.prepare(`DELETE FROM slots WHERE company_id IN (${companyIdsPlaceholders})`).run(...ids);
+        db.prepare(`DELETE FROM employee_directions WHERE employee_id IN (SELECT id FROM employees WHERE company_id IN (${companyIdsPlaceholders}))`).run(
+          ...ids
+        );
+        db.prepare(`DELETE FROM employees WHERE company_id IN (${companyIdsPlaceholders})`).run(...ids);
+        db.prepare(`DELETE FROM directions WHERE company_id IN (${companyIdsPlaceholders})`).run(...ids);
+        db.prepare(`DELETE FROM companies WHERE id IN (${companyIdsPlaceholders})`).run(...ids);
+      }
     }
-  }
-  db.prepare("DELETE FROM users WHERE email IN (?, ?, ?, ?, ?)").run(...TEST_EMAILS);
+
+    db.prepare(`DELETE FROM chat_messages WHERE user_event_id IN (SELECT id FROM user_events WHERE user_id IN (${placeholders}))`).run(
+      ...userIds
+    );
+    db.prepare(`DELETE FROM user_events WHERE user_id IN (${placeholders})`).run(...userIds);
+    db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...userIds);
+  });
+
+  tx();
   console.log("Старые тестовые данные удалены.");
 }
 
