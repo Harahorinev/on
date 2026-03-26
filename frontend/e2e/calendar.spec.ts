@@ -16,7 +16,7 @@ test.describe('Мой календарь', () => {
     await page.getByRole('link', { name: 'Мой календарь' }).click();
     await expect(page).toHaveURL(/\/calendar/);
     await expect(page.getByRole('heading', { name: 'Мой календарь' })).toBeVisible();
-    await expect(page.getByText(/Неделя с/)).toBeVisible();
+    await expect(page.getByText(/Неделя:/)).toBeVisible();
     const dayCards = page.locator('.card-calendar-day');
     await expect(dayCards).toHaveCount(7);
   });
